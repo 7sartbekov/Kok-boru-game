@@ -1,0 +1,1925 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kök Börü Rider</title>
+<meta name="description" content="A browser game about kök börü, the Kyrgyz horseback game. Ride Sarmat for Talas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800;900&family=Golos+Text:wght@400;500;600&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<style>
+/* Layout: one column. Title band, ram-horn ornament, HUD fused to the framed pitch canvas, then controls + field notes in two columns. */
+:root{
+  --bg:#1a2136;
+  --bg-2:#131a2b;
+  --panel:#222b45;
+  --line:#36405e;
+  --fg:#f2e8d2;
+  --muted:#aeb0c4;
+  --red:#c9372c;
+  --blue:#4f86c6;
+  --ochre:#e0a83c;
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --horn:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 16'%3E%3Cpath d='M24 15C24 7 17 2 11 3.5C5.5 5 5 12 10.5 12.5C13.5 12.8 14.5 9.5 12.5 8.5M24 15C24 7 31 2 37 3.5C42.5 5 43 12 37.5 12.5C34.5 12.8 33.5 9.5 35.5 8.5' fill='none' stroke='%23c9372c' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E");
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+[hidden]{display:none!important}
+body{
+  font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1100px;margin:0 auto;padding-block:24px 48px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 28px}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(32px,5.4vw,56px);line-height:1;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.kg{display:inline-block;font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--ochre);margin-bottom:10px}
+.lede{color:var(--muted);max-width:50ch;margin:0}
+.horn{height:14px;background:var(--horn) repeat-x left center/48px 14px}
+
+.stage{border:1px solid var(--line);background:var(--bg-2)}
+.hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.team{display:flex;align-items:center;gap:12px;min-width:0}
+.team.b{justify-content:flex-end;text-align:right}
+.score{font-family:var(--f-display);font-weight:800;font-size:32px;line-height:1;font-variant-numeric:tabular-nums;min-width:1.1em;text-align:center}
+.team.a .score{color:#e5574b}
+.team.b .score{color:#7aa9de}
+.tname{font-weight:600;font-size:13px;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap}
+.tsub{color:var(--muted);font-size:12px;white-space:nowrap}
+.stam{height:5px;width:110px;max-width:100%;background:var(--line);margin-top:6px;overflow:hidden}
+.stam i{display:block;height:100%;background:var(--ochre);transform-origin:left center}
+.mid{text-align:center;min-width:0}
+.clock{font-family:var(--f-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.status{font-size:12px;color:var(--muted);white-space:nowrap}
+
+.canvas-wrap{position:relative}
+canvas:focus{outline:none}
+canvas{display:block;width:100%;max-width:100%;aspect-ratio:5/3;background:#6d7442;touch-action:none}
+
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(19,26,43,.58)}
+.ov-panel{
+  width:calc(100% - 32px);max-width:420px;background:var(--panel);border:1px solid var(--line);
+  padding:0 24px 22px;display:flex;flex-direction:column;gap:12px
+}
+.ov-panel::before{content:"";display:block;height:14px;margin:0 -24px 4px;background:var(--horn) repeat-x left center/48px 14px;border-bottom:1px solid var(--line);padding-block:6px;background-color:var(--bg-2)}
+.eyebrow{margin:0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ochre);font-weight:600}
+.ov-panel h2{font-family:var(--f-display);font-weight:800;font-size:28px;line-height:1.1;margin:0;text-wrap:balance}
+.ov-text{margin:0;color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line)}
+.seg button{font:600 13px var(--f-body);padding:9px 6px;background:transparent;color:var(--muted);border:0;border-right:1px solid var(--line);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.cta{font:800 15px var(--f-display);letter-spacing:.02em;padding:12px 20px;background:var(--red);color:#fff6ea;border:0;cursor:pointer;flex:1}
+.cta:hover{background:#d84336}
+.ghost{font:600 14px var(--f-body);padding:12px 16px;background:transparent;color:var(--fg);border:1px solid var(--line);cursor:pointer}
+.ghost:hover{border-color:var(--muted)}
+button:focus-visible{outline:2px solid var(--ochre);outline-offset:2px}
+
+.skip{position:absolute;top:10px;right:max(10px,env(safe-area-inset-right,0px));font:600 12px var(--f-body);color:var(--fg);background:rgba(19,26,43,.78);border:1px solid var(--line);padding:6px 12px;cursor:pointer}
+.skip:hover{border-color:var(--muted)}
+.touch{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:12px;display:none;gap:10px}
+.touch button{width:64px;height:64px;border-radius:50%;border:2px solid rgba(242,232,210,.55);background:rgba(19,26,43,.55);color:var(--fg);font:700 11px var(--f-display);letter-spacing:.04em;touch-action:none;user-select:none;-webkit-user-select:none}
+.touch #btnGrip{background:rgba(224,168,60,.8);border-color:rgba(255,240,210,.7);color:#1a2136}
+.touch #btnThrow{background:rgba(201,55,44,.8);border-color:rgba(255,230,210,.7)}
+@media (pointer:coarse){ .stage.playing .touch{display:flex} }
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:9px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+kbd{font:600 11px var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-bottom-width:2px;padding:1px 6px;margin-right:4px}
+.toggles{margin-left:auto;display:flex;gap:8px}
+.sound{font:600 12px var(--f-body);color:var(--fg);background:transparent;border:1px solid var(--line);padding:3px 12px;cursor:pointer}
+.sound[aria-pressed="false"]{color:var(--muted)}
+.dedication{display:flex;flex-direction:column;gap:14px;padding-top:8px}
+.dedication p{margin:0;max-width:60ch;font-size:17px;line-height:1.6}
+.dedication strong{font-family:var(--f-display);font-weight:800;color:var(--ochre)}
+.dedication .credit{font-size:13px;color:var(--muted)}
+.dedication .sig{font-family:var(--f-display);font-weight:600;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+.notes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:28px;padding-top:6px}
+.notes h3{font-family:var(--f-display);font-weight:600;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--ochre);margin:0 0 10px}
+.notes p{margin:0 0 10px;color:var(--muted);max-width:62ch}
+dl.terms{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 18px}
+dl.terms dt{font-family:var(--f-display);font-weight:600;font-size:14px}
+dl.terms dt small{display:block;font-family:var(--f-body);font-weight:400;color:var(--muted);font-size:12px}
+dl.terms dd{margin:0;color:var(--muted);max-width:62ch}
+
+@media (max-width:720px){
+  .notes{grid-template-columns:minmax(0,1fr)}
+  .hud{padding:8px 10px;gap:8px}
+  .score{font-size:24px}
+  .tsub,.status{display:none}
+  .clock{font-size:15px}
+  .stam{width:70px}
+  .ov-panel{padding:0 14px 12px;gap:8px}
+  .ov-panel::before{margin:0 -14px 2px;padding-block:3px}
+  .ov-panel h2{font-size:18px}
+  .ov-text,.ov-panel .eyebrow{display:none}
+  .seg button{padding:6px 4px;font-size:12px}
+  .cta,.ghost{padding:8px 12px;font-size:13px}
+  .touch button{width:54px;height:54px}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <span class="kg">Көк бөрү</span>
+      <h1>Kök Börü Rider</h1>
+    </div>
+    <p class="lede">The Kyrgyz horseback game, four riders a side. You are Adil on Sarmat, riding for Talas. Grab the ulak, fight off Chüy, and throw it into their kazan before the clock runs out.</p>
+  </header>
+  <div class="horn" aria-hidden="true"></div>
+
+  <div class="stage" id="stage">
+    <div class="hud">
+      <div class="team a">
+        <div class="score" id="sA">0</div>
+        <div style="min-width:0">
+          <div class="tname">Talas</div>
+          <div class="tsub">Adil on Sarmat</div>
+          <div class="stam" title="Horse stamina"><i id="stamI"></i></div>
+        </div>
+      </div>
+      <div class="mid">
+        <div class="clock" id="clk">Exhibition</div>
+        <div class="status" id="st">Ulak is loose</div>
+      </div>
+      <div class="team b">
+        <div style="min-width:0">
+          <div class="tname">Chüy</div>
+          <div class="tsub">Rival team</div>
+        </div>
+        <div class="score" id="sB">0</div>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="pitch" tabindex="0" role="img" aria-label="Top-down kok boru field with riders, the ulak and two kazans"></canvas>
+
+      <div class="overlay" id="ovStart">
+        <div class="ov-panel">
+          <p class="eyebrow">4 v 4 · three periods · first to 5</p>
+          <h2>Ride Sarmat for Talas</h2>
+          <p class="ov-text">You are Adil, in the gold ring. The match opens with the anthem ceremony and the people's blessing. Then pick up the ulak, carry it to the blue kazan on the right, and throw.</p>
+          <div class="seg" role="group" aria-label="Difficulty">
+            <button type="button" id="dEasy" data-d="easy" aria-pressed="false">Easy</button>
+            <button type="button" id="dNormal" data-d="normal" aria-pressed="true">Normal</button>
+            <button type="button" id="dHard" data-d="hard" aria-pressed="false">Hard</button>
+          </div>
+          <div class="row"><button type="button" class="cta" id="btnStart">Ride out</button></div>
+        </div>
+      </div>
+
+      <div class="overlay" id="ovPause" hidden>
+        <div class="ov-panel">
+          <p class="eyebrow">Match paused</p>
+          <h2>Horses are resting</h2>
+          <div class="row">
+            <button type="button" class="cta" id="btnResume">Resume</button>
+            <button type="button" class="ghost" id="btnQuit">Quit to menu</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="ovEnd" hidden>
+        <div class="ov-panel">
+          <p class="eyebrow" id="endEyebrow">Full time</p>
+          <h2 id="endTitle">Chüy win</h2>
+          <p class="ov-text" id="endText"></p>
+          <div class="row">
+            <button type="button" class="cta" id="btnAgain">Ride again</button>
+            <button type="button" class="ghost" id="btnMenu">Difficulty</button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="skip" id="btnSkip" hidden>Skip ceremony</button>
+
+      <div class="touch">
+        <button type="button" id="btnGrip">Grip</button>
+        <button type="button" id="btnSprint">Sprint</button>
+        <button type="button" id="btnThrow">Throw</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><kbd>WASD</kbd><kbd>Arrows</kbd>ride</span>
+      <span><kbd>Shift</kbd>sprint</span>
+      <span><kbd>Space</kbd><kbd>Click</kbd>throw the ulak</span>
+      <span><kbd>E</kbd>grip and pull</span>
+      <span><kbd>P</kbd>pause</span>
+      <span><kbd>M</kbd>anthem</span>
+      <span><kbd>N</kbd>sound</span>
+      <span class="toggles">
+        <button type="button" class="sound" id="btnMusic" aria-pressed="true">Anthem on</button>
+        <button type="button" class="sound" id="btnSound" aria-pressed="true">Sound on</button>
+      </span>
+    </div>
+  </div>
+
+  <section class="notes">
+    <div>
+      <h3>How a match goes</h3>
+      <p>Ride over the loose ulak to pick it up. It weighs about 30 kg, so Sarmat slows down while you carry it and you can only heave it a short way.</p>
+      <p>Taking the ulak from another rider is a tug-of-war. When a Chüy rider comes alongside you, a grip bar appears under the two horses. Hold E to keep hold of it, or sprint to break away. When you ride alongside a Chüy carrier, tap E or Space fast (or click) to pull it from him. Each tap is a hard yank. Two riders pulling together are stronger, and teammates riding next to the carrier help him hold on.</p>
+      <p>Carry it close. Once you are inside the gold dashed ring around the Chüy kazan, the kazan lights up and says THROW, and your heave goes in. Ride right up to the kazan and Sarmat drops it in by himself. Away from the kazan, a throw is a short pass to a teammate.</p>
+      <p>Sprinting drains the gold stamina bar, and it refills while you ride normally.</p>
+      <p>On a phone, drag on the field to steer and use the round buttons. Turn the phone sideways for a bigger field.</p>
+    </div>
+    <div>
+      <h3>Field notes</h3>
+      <dl class="terms">
+        <dt>Kök börü<small>көк бөрү</small></dt>
+        <dd>Literally "grey wolf". The usual origin story is herders on horseback chasing down a wolf that attacked the flock and fighting over the carcass.</dd>
+        <dt>Ulak<small>улак</small></dt>
+        <dd>The goat carcass both teams fight over, 30 to 32 kg under the federation rules. In this game it is drawn as a plain felt bundle.</dd>
+        <dt>Kazan<small>казан</small></dt>
+        <dd>The raised goal at each end of the field. Riders can't ride through it, so the ulak has to be thrown in.</dd>
+        <dt>Chabandes<small>чабандес</small></dt>
+        <dd>The rider. The game is won in shoulder-to-shoulder fights at a gallop, and by a horse that still has something left at the end.</dd>
+        <dt>The sideline</dt>
+        <dd>Each bench has two substitutes waiting on their horses, two managers and the coach, who paces and waves when his team gets close to the kazan. The referee rides alongside the play in yellow. Fans fill the wooden stands along the bottom and jump up with their flags when their side scores.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="notes rules">
+    <div>
+      <h3>Rules in this game</h3>
+      <p>Taken from the Kök Börü Federation of the Kyrgyz Republic rules (2024) and simplified so the game stays quick and easy.</p>
+      <p>Left out on purpose: offside in the penalty area, the bullit shoot-out, swapping kazans between periods, 12-rider squads and the two-minute capture limit.</p>
+    </div>
+    <dl class="terms">
+      <dt>Four a side</dt>
+      <dd>Each team has four riders on the field, as in the real game.</dd>
+      <dt>Opening ceremony</dt>
+      <dd>While the Kök Börü anthem plays, the teams line up on the field, ride around the tai-kazans, greet each other in the middle and line up in front of the stands. The people in the stands give the bata, the blessing, from their seats with their hands held together, and the riders join in on horseback. Everyone says "Oomiyin" and passes their hands over their face. Only then does the match begin.</dd>
+      <dt>Oath</dt>
+      <dd>Then the riders take the start line and swear to play fair.</dd>
+      <dt>Periods</dt>
+      <dd>Three periods of one minute each instead of fifteen. If the score is level at the end, the next salym wins.</dd>
+      <dt>Salym<small>салым</small></dt>
+      <dd>A goal: the ulak lands in the kazan. Play restarts from the start line with the ulak in the centre circle.</dd>
+      <dt>Jekeme-jeke<small>жекеме-жеке</small></dt>
+      <dd>If the ulak goes out of the field, play stops. You and one Chüy rider face off in the nearest circle while everyone else waits outside it.</dd>
+      <dt>Snatching</dt>
+      <dd>Riders may push with their horses and bodies but may not grab the other rider, so the fight is over the carcass itself. Because it weighs about 30 kg, winning it takes a long pull, not a quick grab.</dd>
+      <dt>Rotation</dt>
+      <dd>Horses tire as they play and slow down. A tired rider rides to his team's bench at the top touchline and swaps with a fresh rider and horse waiting there, as in the real rule where the two must touch at the line. Sarmat stays in for the whole match.</dd>
+      <dt>Penalty box</dt>
+      <dd>Ramming at speed into a rider who is picking up or holding the ulak is a foul. The Chüy rider who does it sits out in the penalty box for 20 seconds, standing in for two minutes.</dd>
+    </dl>
+  </section>
+
+  <section class="dedication">
+    <div class="horn" aria-hidden="true"></div>
+    <p><strong>Sarmat</strong> was my family's horse, and he played for the real Talas team. This game is for my father, who served as president of the sport in Kyrgyzstan.</p>
+    <p class="sig">Adil</p>
+    <p class="credit">Music: the Kök Börü anthem.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+const W = 1200, H = 720;
+const F = { x0: 40, y0: 64, x1: 1160, y1: 656 };
+const CX = 600, CY = 360;
+const KR = 46, KHOLE = 32, RR = 19;
+/* The ulak weighs about 30 kg, so it is heaved, not thrown far. */
+const DUNK_R = 118, LOCK_R = 180, PER_SIDE = 4;
+const PERIODS = 3, PERIOD_LEN = 60, PEN_TIME = 20;
+const JK_R = 58, JK = [{ x: CX - 300, y: CY }, { x: CX, y: CY }, { x: CX + 300, y: CY }];
+const PBOX = { x: 200, y: 32 };
+const KAZ = [{ x: 150, y: CY, team: 0 }, { x: 1050, y: CY, team: 1 }];
+const TEAM = [
+  { name: 'Talas', color: '#c9372c', dark: '#86231c', trim: '#e0a83c' },
+  { name: 'Chüy', color: '#4f86c6', dark: '#294f7f', trim: '#efe2c4' }
+];
+const DIFF = {
+  easy:   { ai: .84, pull: .15, resist: .10, react: .38, aim: .55 },
+  normal: { ai: .95, pull: .21, resist: .14, react: .22, aim: .34 },
+  hard:   { ai: 1.04, pull: .28, resist: .19, react: .12, aim: .2 }
+};
+const MATCH = 180, WIN = 5;
+const TAU = Math.PI * 2;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DISPLAY = '"Unbounded","Arial Black",sans-serif';
+const BODY = '"Golos Text",system-ui,sans-serif';
+
+const $ = id => document.getElementById(id);
+const cv = $('pitch'), mainCtx = cv.getContext('2d');
+let ctx = mainCtx;
+const stage = $('stage');
+
+function resize() {
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.max(1, Math.round(r.width * dpr));
+  cv.height = Math.max(1, Math.round(r.height * dpr));
+}
+new ResizeObserver(resize).observe(cv); resize();
+
+/* ---------- helpers ---------- */
+const wrap = a => a - TAU * Math.floor((a + Math.PI) / TAU);
+const angDiff = (a, b) => wrap(b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const hyp = Math.hypot;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgb(${Math.round((n >> 16) * f)},${Math.round((n >> 8 & 255) * f)},${Math.round((n & 255) * f)})`;
+}
+function segDist(x1, y1, x2, y2, px, py) {
+  const dx = x2 - x1, dy = y2 - y1, l = dx * dx + dy * dy;
+  let t = l ? ((px - x1) * dx + (py - y1) * dy) / l : 0; t = clamp(t, 0, 1);
+  return hyp(x1 + dx * t - px, y1 + dy * t - py);
+}
+function ell(g, x, y, rx, ry) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, TAU); g.fill(); }
+function nearestTo(list, x, y) {
+  let b = null, bd = 1e9;
+  for (const o of list) { const d = hyp(o.x - x, o.y - y); if (d < bd) { bd = d; b = o; } }
+  return b;
+}
+
+/* ---------- sound (synthesized with Web Audio) ---------- */
+const Snd = { ac: null, master: null, noise: null, on: true, ks: {} };
+try { Snd.on = localStorage.getItem('kb-sound') !== 'off'; } catch (_) {}
+function audioInit() {
+  if (Snd.ac) { if (Snd.ac.state === 'suspended') Snd.ac.resume().catch(() => {}); return; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  try { Snd.ac = new AC(); } catch (_) { return; }
+  const ac = Snd.ac;
+  Snd.master = ac.createGain(); Snd.master.gain.value = Snd.on ? .8 : 0;
+  const comp = ac.createDynamicsCompressor(); Snd.master.connect(comp); comp.connect(ac.destination);
+  const len = ac.sampleRate * 2, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  Snd.noise = buf;
+  const src = ac.createBufferSource(); src.buffer = buf; src.loop = true;
+  const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = .6;
+  const g = ac.createGain(); g.gain.value = .03;
+  src.connect(bp); bp.connect(g); g.connect(Snd.master); src.start();
+}
+const live = () => Snd.ac && Snd.on && Snd.ac.state === 'running';
+function noiseBurst({ t = 0, dur = .1, type = 'lowpass', f = 800, f2 = 0, q = 1, vol = .3, attack = .002 }) {
+  if (!live()) return;
+  const ac = Snd.ac, t0 = ac.currentTime + t;
+  const s = ac.createBufferSource(); s.buffer = Snd.noise;
+  const fl = ac.createBiquadFilter(); fl.type = type; fl.Q.value = q; fl.frequency.setValueAtTime(f, t0);
+  if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+  const g = ac.createGain(); g.gain.setValueAtTime(.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + attack); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  s.connect(fl); fl.connect(g); g.connect(Snd.master);
+  s.start(t0, Math.random() * 1.5); s.stop(t0 + dur + .05);
+}
+function tone({ t = 0, f = 100, f2 = 0, dur = .15, vol = .3, type = 'sine', attack = .003 }) {
+  if (!live()) return;
+  const ac = Snd.ac, t0 = ac.currentTime + t;
+  const o = ac.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+  const g = ac.createGain(); g.gain.setValueAtTime(.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + attack); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  o.connect(g); g.connect(Snd.master); o.start(t0); o.stop(t0 + dur + .05);
+}
+function pluck(freq, t, vol) {
+  if (!live()) return;
+  const ac = Snd.ac, key = Math.round(freq);
+  let buf = Snd.ks[key];
+  if (!buf) {
+    const sr = ac.sampleRate, len = Math.floor(sr * 1.3), N = Math.max(2, Math.round(sr / freq));
+    buf = ac.createBuffer(1, len, sr); const d = buf.getChannelData(0);
+    for (let i = 0; i < N; i++) d[i] = Math.random() * 2 - 1;
+    for (let i = N; i < len; i++) d[i] = .497 * (d[i - N] + d[i - N + 1]);
+    Snd.ks[key] = buf;
+  }
+  const s = ac.createBufferSource(); s.buffer = buf;
+  const g = ac.createGain(); g.gain.value = vol;
+  s.connect(g); g.connect(Snd.master); s.start(ac.currentTime + t);
+}
+function komuz(win, delay = 0) {
+  const notes = win ? [330, 440, 494, 440, 587, 494, 660] : [330, 294, 262, 247];
+  const step = win ? .11 : .17;
+  notes.forEach((f, i) => pluck(f, delay + i * step, .32));
+  if (win) { pluck(220, delay, .22); const end = delay + notes.length * step; pluck(330, end, .26); pluck(440, end, .22); pluck(660, end, .18); }
+}
+function hoof(v) { tone({ f: 95, f2: 50, dur: .07, vol: .5 * v }); noiseBurst({ f: 900, dur: .04, vol: .2 * v, q: .7 }); }
+function sfxPickup(v) { tone({ f: 150, f2: 70, dur: .13, vol: .35 * v }); noiseBurst({ f: 500, dur: .1, vol: .2 * v }); }
+function sfxThrow(v) { noiseBurst({ type: 'bandpass', f: 400, f2: 2200, dur: .34, vol: .38 * v, q: 1.2, attack: .03 }); }
+function sfxSnatch() { noiseBurst({ type: 'bandpass', f: 650, f2: 420, dur: .55, vol: .22, q: .5, attack: .08 }); tone({ f: 120, f2: 60, dur: .1, vol: .3 }); }
+function sfxSnort() { noiseBurst({ type: 'bandpass', f: 380, f2: 180, dur: .3, vol: .32, q: 2.2, attack: .02 }); }
+function sfxDrum(big) { tone({ f: big ? 95 : 72, f2: 38, dur: big ? .55 : .3, vol: big ? .75 : .5 }); noiseBurst({ f: 300, dur: .08, vol: .2 }); }
+function sfxRoar(vol, dur, t = 0) { noiseBurst({ t, type: 'bandpass', f: 950, f2: 650, dur, vol, q: .5, attack: .18 }); }
+function sfxThud() { tone({ f: 70, f2: 35, dur: .35, vol: .7 }); noiseBurst({ f: 400, dur: .2, vol: .3 }); }
+function sfxWhistle() { tone({ f: 2600, dur: .22, vol: .14, type: 'triangle', attack: .01 }); tone({ t: .28, f: 2600, dur: .5, vol: .14, type: 'triangle', attack: .01 }); }
+
+/* ---------- music: the Kök Börü anthem ---------- */
+const music = new Audio('anthem.mp3');
+music.loop = true; music.preload = 'auto';
+const MUSIC_VOL = .45;
+let musicOn = true, duckT = 0, musicVol = MUSIC_VOL;
+try { musicOn = localStorage.getItem('kb-music') !== 'off'; } catch (_) {}
+music.volume = MUSIC_VOL;
+function musicPlay(restart) {
+  if (!musicOn) return;
+  if (restart) { try { music.currentTime = 0; } catch (_) {} }
+  const p = music.play(); if (p && p.catch) p.catch(() => {});
+}
+function musicTick(dt) {
+  duckT = Math.max(0, duckT - dt);
+  const target = (mode === 'ceremony' || cer) ? .7 : duckT > 0 ? .14 : MUSIC_VOL;
+  const v = musicVol + (target - musicVol) * Math.min(1, dt * 4);
+  if (Math.abs(v - musicVol) > .002) { musicVol = v; try { music.volume = clamp(v, 0, 1); } catch (_) {} }
+}
+
+/* ---------- static field ---------- */
+const PLANK_Y = [674, 691, 708];
+const AISLES = [330, 600, 870];
+let fieldCan;
+function yurt(g, x, y, r) {
+  g.fillStyle = 'rgba(0,0,0,.22)'; ell(g, x + 3, y + 4, r, r);
+  g.fillStyle = '#efe6d3'; ell(g, x, y, r, r);
+  g.strokeStyle = '#8c6b47'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke();
+  g.strokeStyle = 'rgba(140,107,71,.5)'; g.lineWidth = 1;
+  for (let i = 0; i < 16; i++) {
+    const a = i / 16 * TAU;
+    g.beginPath(); g.moveTo(x + Math.cos(a) * r * .32, y + Math.sin(a) * r * .32);
+    g.lineTo(x + Math.cos(a) * r * .96, y + Math.sin(a) * r * .96); g.stroke();
+  }
+  g.strokeStyle = '#b8372d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r * .8, 0, TAU); g.stroke();
+  const t = r * .3;
+  g.fillStyle = '#7a5634'; ell(g, x, y, t, t);
+  g.save(); g.beginPath(); g.arc(x, y, t, 0, TAU); g.clip();
+  g.strokeStyle = '#ead9b5'; g.lineWidth = 1.1;
+  for (const o of [-.35, 0, .35]) {
+    g.beginPath(); g.moveTo(x - t, y + o * t); g.lineTo(x + t, y + o * t); g.stroke();
+    g.beginPath(); g.moveTo(x + o * t, y - t); g.lineTo(x + o * t, y + t); g.stroke();
+  }
+  g.restore();
+}
+function drawKazan(g, k) {
+  const T = TEAM[k.team];
+  g.fillStyle = 'rgba(0,0,0,.3)'; ell(g, k.x + 6, k.y + 8, KR + 11, KR + 11);
+  g.fillStyle = '#5e4127'; ell(g, k.x, k.y, KR + 11, KR + 11);
+  for (let i = 0; i < 22; i++) {
+    const a = i / 22 * TAU, sx = k.x + Math.cos(a) * (KR + 6), sy = k.y + Math.sin(a) * (KR + 6);
+    g.fillStyle = i % 2 ? '#7c5a38' : '#6a4a2c'; ell(g, sx, sy, 5, 4);
+  }
+  g.fillStyle = '#d8c39a'; ell(g, k.x, k.y, KR, KR);
+  g.strokeStyle = T.color; g.lineWidth = 9; g.beginPath(); g.arc(k.x, k.y, KR - 8, 0, TAU); g.stroke();
+  g.strokeStyle = '#efe2c4'; g.lineWidth = 1.6;
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * TAU, rx = k.x + Math.cos(a) * (KR - 8), ry = k.y + Math.sin(a) * (KR - 8);
+    g.beginPath(); g.arc(rx, ry, 2.4, a, a + Math.PI); g.stroke();
+  }
+  const grd = g.createRadialGradient(k.x, k.y, 4, k.x, k.y, KHOLE);
+  grd.addColorStop(0, '#120b06'); grd.addColorStop(1, '#3a2717');
+  g.fillStyle = grd; ell(g, k.x, k.y, KHOLE - 2, KHOLE - 2);
+}
+function buildField() {
+  const S = 2;
+  fieldCan = document.createElement('canvas'); fieldCan.width = W * S; fieldCan.height = H * S;
+  const g = fieldCan.getContext('2d'); g.scale(S, S);
+  g.fillStyle = '#6a7140'; g.fillRect(0, 0, W, H);
+  let seed = 11; const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  const inField = (x, y) => x > F.x0 - 2 && x < F.x1 + 2 && y > F.y0 - 2 && y < F.y1 + 2;
+  /* grass around the field */
+  const tc = ['rgba(68,80,36,.5)', 'rgba(122,130,62,.5)', 'rgba(182,164,92,.45)', 'rgba(58,68,32,.42)'];
+  g.lineWidth = 1;
+  for (let i = 0; i < 2600; i++) {
+    const x = rnd() * W, y = rnd() * (F.y1 - 4); if (inField(x, y)) continue;
+    g.strokeStyle = tc[i % 4]; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - .5) * 4, y - 2 - rnd() * 4); g.stroke();
+  }
+  /* the playing field: washed sand, 6-8 cm deep under the federation rules */
+  g.fillStyle = 'rgba(70,56,30,.35)'; g.fillRect(F.x0 - 6, F.y0 - 6, F.x1 - F.x0 + 12, F.y1 - F.y0 + 12);
+  const grd = g.createLinearGradient(0, F.y0, 0, F.y1);
+  grd.addColorStop(0, '#dcc48f'); grd.addColorStop(1, '#d2b679');
+  g.fillStyle = grd; g.fillRect(F.x0, F.y0, F.x1 - F.x0, F.y1 - F.y0);
+  g.save(); g.beginPath(); g.rect(F.x0, F.y0, F.x1 - F.x0, F.y1 - F.y0); g.clip();
+  /* raked rows */
+  g.lineWidth = 1;
+  for (let y = F.y0 + 4; y < F.y1; y += 7) {
+    g.strokeStyle = y % 14 < 7 ? 'rgba(150,118,70,.10)' : 'rgba(255,245,215,.12)';
+    g.beginPath(); g.moveTo(F.x0, y + rnd() * 2); g.lineTo(F.x1, y + rnd() * 2); g.stroke();
+  }
+  /* churned, darker sand where the riders fight most */
+  for (const [x, y, r] of [[CX, CY, 170], [KAZ[0].x + 60, CY, 190], [KAZ[1].x - 60, CY, 190], [CX - 300, CY, 90], [CX + 300, CY, 90]]) {
+    const d = g.createRadialGradient(x, y, 10, x, y, r);
+    d.addColorStop(0, 'rgba(150,108,58,.34)'); d.addColorStop(1, 'rgba(150,108,58,0)');
+    g.fillStyle = d; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  /* grains and hoof prints */
+  const sc = ['rgba(150,116,66,.35)', 'rgba(250,236,200,.55)', 'rgba(120,90,52,.28)', 'rgba(238,218,170,.5)'];
+  for (let i = 0; i < 5200; i++) {
+    const x = F.x0 + rnd() * (F.x1 - F.x0), y = F.y0 + rnd() * (F.y1 - F.y0);
+    g.fillStyle = sc[i % 4]; g.fillRect(x, y, 1 + rnd() * 1.4, 1 + rnd() * 1.2);
+  }
+  for (let i = 0; i < 340; i++) {
+    const near = KAZ[i % 2], spread = i % 3 ? 260 : 520;
+    const x = clamp(near.x + (rnd() - .5) * spread + (i % 5 === 0 ? (CX - near.x) * rnd() : 0), F.x0 + 6, F.x1 - 6);
+    const y = clamp(CY + (rnd() - .5) * 460, F.y0 + 6, F.y1 - 6), a = rnd() * TAU;
+    g.fillStyle = 'rgba(110,80,44,.22)';
+    g.beginPath(); g.ellipse(x, y, 2.6, 2.1, a, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(255,240,205,.25)';
+    g.beginPath(); g.ellipse(x + 1, y - 1, 1.6, 1.2, a, 0, TAU); g.fill();
+  }
+  g.restore();
+  g.strokeStyle = 'rgba(255,253,246,.95)'; g.lineWidth = 3;
+  g.strokeRect(F.x0, F.y0, F.x1 - F.x0, F.y1 - F.y0);
+  g.beginPath(); g.moveTo(CX, F.y0); g.lineTo(CX, F.y1); g.stroke();
+  g.beginPath(); g.arc(CX, CY, 72, 0, TAU); g.stroke();
+  g.fillStyle = 'rgba(255,253,246,.95)'; ell(g, CX, CY, 4, 4);
+  g.save(); g.beginPath(); g.rect(F.x0, F.y0, F.x1 - F.x0, F.y1 - F.y0); g.clip();
+  g.setLineDash([12, 10]); g.lineWidth = 2.4; g.strokeStyle = 'rgba(255,253,246,.8)';
+  for (const k of KAZ) { g.beginPath(); g.arc(k.x, k.y, 240, 0, TAU); g.stroke(); }
+  g.restore(); g.setLineDash([]);
+  /* jekeme-jeke circles for one-on-one restarts */
+  g.strokeStyle = 'rgba(255,253,246,.85)'; g.lineWidth = 2.4;
+  for (const c of JK) if (c.x !== CX) { g.beginPath(); g.arc(c.x, c.y, JK_R, 0, TAU); g.stroke(); }
+  for (const c of JK) {
+    g.beginPath(); g.moveTo(c.x - 12, c.y - JK_R + 8); g.lineTo(c.x - 12, c.y + JK_R - 8); g.stroke();
+    g.beginPath(); g.moveTo(c.x + 12, c.y - JK_R + 8); g.lineTo(c.x + 12, c.y + JK_R - 8); g.stroke();
+  }
+
+  /* top edge: yurts at the corners, the penalty box, spectators between */
+  const people = ['#c9372c', '#efe2c4', '#2c3550', '#e0a83c', '#4f86c6', '#6b3d2a'];
+  for (const x of [70, 1002, 1130]) yurt(g, x, 32, 22);
+  g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(PBOX.x - 52, 7, 104, 52);
+  g.fillStyle = '#6e6140'; g.fillRect(PBOX.x - 55, 4, 104, 52);
+  g.strokeStyle = '#d9c9a0'; g.lineWidth = 2; g.strokeRect(PBOX.x - 52, 7, 98, 46);
+  g.font = `800 8px ${DISPLAY}`; g.fillStyle = '#efe2c4'; g.textAlign = 'center'; g.textBaseline = 'top';
+  g.fillText('PENALTY BOX', PBOX.x - 3, 10);
+  for (let x = 258; x < 292; x += 9) { g.fillStyle = people[(x / 9 | 0) % 6]; ell(g, x + rnd() * 3, F.y0 - 7 - rnd() * 4, 3.2, 3.2); }
+  for (let x = 912; x < 972; x += 9) { g.fillStyle = people[(x / 9 | 0) % 6]; ell(g, x + rnd() * 3, F.y0 - 7 - rnd() * 4, 3.2, 3.2); }
+
+  /* team zones: a shyrdak rug for each bench */
+  for (const t of [0, 1]) {
+    const T = TEAM[t], x0 = t ? 618 : 300, w = 282, y0 = 4, h = 54;
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x0 + 3, y0 + 4, w, h);
+    g.fillStyle = T.dark; g.fillRect(x0, y0, w, h);
+    g.strokeStyle = T.trim; g.lineWidth = 2; g.strokeRect(x0 + 4, y0 + 4, w - 8, h - 8);
+    g.strokeStyle = T.color; g.lineWidth = 1.6;
+    for (let x = x0 + 16; x < x0 + w - 10; x += 22) {
+      g.beginPath(); g.arc(x - 4, y0 + h - 9, 3, Math.PI, TAU * .9); g.stroke();
+      g.beginPath(); g.arc(x + 4, y0 + h - 9, 3, Math.PI * 1.1, TAU); g.stroke();
+    }
+    g.font = `800 9px ${DISPLAY}`; g.fillStyle = T.trim; g.textBaseline = 'top';
+    g.textAlign = t ? 'left' : 'right';
+    g.fillText(T.name.toUpperCase() + ' BENCH', t ? x0 + 10 : x0 + w - 10, y0 + 8);
+  }
+
+  /* bottom edge: wooden stands for the crowd */
+  g.fillStyle = '#4f5432'; g.fillRect(0, F.y1 + 4, W, H - F.y1 - 4);
+  g.strokeStyle = '#6b4f33'; g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(F.x0 - 10, F.y1 + 9); g.lineTo(F.x1 + 10, F.y1 + 9); g.stroke();
+  g.fillStyle = '#5a4128';
+  for (let x = F.x0 - 10; x <= F.x1 + 10; x += 22) g.fillRect(x - 1.5, F.y1 + 6, 3, 7);
+  for (const py of PLANK_Y) {
+    let x0 = 50;
+    for (const a of [...AISLES, 1150 + 14]) {
+      const x1 = a - 14;
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x0 + 1, py + 2, x1 - x0, 6);
+      g.fillStyle = '#9a7650'; g.fillRect(x0, py - 1, x1 - x0, 6);
+      g.fillStyle = '#b89366'; g.fillRect(x0, py - 1, x1 - x0, 1.5);
+      x0 = a + 14;
+    }
+  }
+  for (const a of AISLES) { g.fillStyle = '#6e6140'; g.fillRect(a - 9, F.y1 + 14, 18, H - F.y1 - 14); }
+
+  for (const k of KAZ) drawKazan(g, k);
+
+  const v = g.createRadialGradient(CX, CY, 320, CX, CY, 780);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(10,12,20,.22)');
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+}
+buildField();
+
+/* ---------- crowd in the stands ---------- */
+const FANS = [];
+(() => {
+  let s = 7; const rnd = () => (s = s * 16807 % 2147483647) / 2147483647;
+  const shirts = ['#efe2c4', '#2c3550', '#e0a83c', '#6b3d2a', '#3f6b4a', '#8e4a7a', '#d8d0c2', '#3b4a6b', '#a3462c'];
+  const scarves = ['#c9372c', '#e0a83c', '#3b8f8a', '#efe2c4', '#8e4a7a'];
+  for (const py of PLANK_Y) for (let x = 56; x < 1146; x += 8 + rnd() * 5) {
+    if (AISLES.some(a => Math.abs(x - a) < 17)) continue;
+    if (rnd() < .1) continue;
+    const team = x < CX ? 0 : 1;
+    const r = rnd();
+    FANS.push({
+      x: x + rnd() * 2, y: py + 1, team,
+      shirt: rnd() < .38 ? TEAM[team].color : shirts[Math.floor(rnd() * shirts.length)],
+      head: r < .42 ? 'kalpak' : r < .7 ? 'scarf' : 'hair',
+      scarf: scarves[Math.floor(rnd() * scarves.length)],
+      flag: rnd() < .08, ph: rnd() * TAU, jumpy: .6 + rnd() * .8
+    });
+  }
+})();
+let crowdHype = 0;
+function drawFans() {
+  for (const f of FANS) {
+    const theirs = pauseT > 0 && lastScorer === f.team;
+    const hype = theirs ? 1 : crowdHype * .45;
+    const j = hype * Math.abs(Math.sin(simTime * 9 * f.jumpy + f.ph)) * 3.4;
+    const x = f.x, y = f.y - j;
+    if (hype > .3 || fanArms > .05) {
+      const lift = hype > .3 ? 5 + j : 5.5 * fanArms;
+      ctx.strokeStyle = f.shirt; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.lineTo(x - 4.5, y - lift); ctx.moveTo(x + 3, y); ctx.lineTo(x + 4.5, y - lift); ctx.stroke();
+    }
+    ctx.fillStyle = f.shirt; ell(ctx, x, y, 4.3, 2.7);
+    if (f.head === 'kalpak') { ctx.fillStyle = '#f3ede0'; ell(ctx, x, y - 1, 2.5, 2.5); ctx.fillStyle = '#26221f'; ell(ctx, x, y - 1, .8, .8); }
+    else if (f.head === 'scarf') { ctx.fillStyle = f.scarf; ell(ctx, x, y - 1, 2.5, 2.5); }
+    else { ctx.fillStyle = '#2a1d16'; ell(ctx, x, y - 1, 2.3, 2.3); }
+    if (bataHands > .05 && hype <= .3) {
+      const hy = ominOn ? y - 1.4 : y - 2 - 2.4 * bataHands;
+      ctx.strokeStyle = f.shirt; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x - 3.2, y - .3); ctx.lineTo(x - .9, hy); ctx.moveTo(x + 3.2, y - .3); ctx.lineTo(x + .9, hy); ctx.stroke();
+      ctx.fillStyle = '#c99a72'; ell(ctx, x, hy - .3, ominOn ? 2.7 : 1.9, ominOn ? 1.7 : 1.3);
+    }
+    if (f.flag) {
+      const w = (theirs ? 3 : 1) * Math.sin(simTime * (theirs ? 12 : 3) + f.ph);
+      const top = y - 12 - (theirs ? 3 : 0);
+      ctx.strokeStyle = '#3a2a1c'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 3, y); ctx.lineTo(x + 3, top); ctx.stroke();
+      ctx.fillStyle = TEAM[f.team].color;
+      ctx.beginPath(); ctx.moveTo(x + 3, top); ctx.lineTo(x + 11, top + 1 + w); ctx.lineTo(x + 11, top + 6 + w); ctx.lineTo(x + 3, top + 5); ctx.closePath(); ctx.fill();
+    }
+  }
+}
+
+/* ---------- state ---------- */
+let mode = 'attract', diff = 'normal', score = [0, 0], clock = MATCH, overtime = false;
+let freezeT = 0, pauseT = 0, pauseNext = 'kickoff', banner = null, simTime = 0;
+let shakeT = 0, flashT = 0, lastScorer = -1;
+let period = 1, jek = null, foulCd = 0, firstKick = false;
+let riders = [], active = [], player, ulak;
+const parts = [], floats = [];
+const COATS = ['#7b4a2b', '#4a3224', '#b07c4f', '#5a3a28', '#d9d1c3', '#2f2520', '#9b6440', '#c2a27a'];
+
+function makeRiders() {
+  riders = [];
+  for (let t = 0; t < 2; t++) for (let i = 0; i < PER_SIDE; i++) {
+    const coat = COATS[t * PER_SIDE + i];
+    riders.push({ team: t, idx: i, num: i + 1, energy: 1, subbing: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, stam: 1, pickCd: 0, immune: 0, throwT: 0, grabT: 0, pen: 0,
+      phase: Math.random() * 7, coat, coatDark: shade(coat, .55), coatLight: shade(coat, 1.25), aiT: 0, cache: null });
+  }
+  player = riders[0];
+  active = riders.slice();
+}
+const onField = r => r.pen <= 0;
+const REF = { x: CX, y: CY - 190, vx: 0, vy: 0, a: 0, phase: 0, coat: '#cfc8bb', coatDark: shade('#cfc8bb', .55), coatLight: '#e4ddd0',
+  colors: { color: '#e8c22c', dark: '#1c1c1f', trim: '#1c1c1f' }, armUp: false, throwT: 0, grabT: 0 };
+function newUlak() { return { x: CX, y: CY, vx: 0, vy: 0, z: 0, vz: 0, carrier: null, hidden: false, rot: Math.PI / 2, fly: null, sinkT: 0, trail: [], thrower: null }; }
+/* Restart from the start line: each team in a row on its own half, the ulak in the centre circle. */
+function kickoff() {
+  const ys = [CY - 45, CY - 135, CY + 45, CY + 135];
+  for (const r of riders) {
+    if (!onField(r)) continue;
+    const s = r.team ? 1 : -1;
+    r.x = CX + s * 210; r.y = ys[r.idx]; r.vx = r.vy = 0;
+    r.a = r.team ? Math.PI : 0; r.pickCd = 0; r.immune = 0; r.aiT = 0; r.cache = null; r.throwT = 0;
+    r.stam = Math.max(r.stam, .6);
+  }
+  ulak = newUlak(); jek = null;
+  REF.x = CX; REF.y = CY - 190; REF.vx = REF.vy = 0; REF.a = 0;
+  freezeT = mode === 'play' ? 2.4 : .6;
+  if (mode === 'play' && firstKick) {
+    firstKick = false; freezeT = 3.4;
+    banner = { text: 'Oomiyin!', sub: 'The riders swear to play fair', t: 2.6, max: 2.6, color: '#e0a83c' };
+  }
+  if (mode === 'play') sfxDrum(false);
+}
+/* Jekeme-jeke: one rider from each side contests the ulak inside a small circle. */
+function setupJekeme(c) {
+  const talas = mode === 'play' && onField(player) ? player : nearestTo(active.filter(r => r.team === 0), c.x, c.y);
+  const chuy = nearestTo(active.filter(r => r.team === 1), c.x, c.y);
+  ulak = newUlak(); ulak.x = c.x; ulak.y = c.y;
+  jek = { x: c.x, y: c.y, a: talas, b: chuy };
+  let i = 0;
+  for (const r of active) {
+    r.vx = r.vy = 0; r.pickCd = 0; r.immune = 0; r.cache = null; r.throwT = 0;
+    if (r === talas) { r.x = c.x - JK_R + 10; r.y = c.y; r.a = 0; continue; }
+    if (r === chuy) { r.x = c.x + JK_R - 10; r.y = c.y; r.a = Math.PI; continue; }
+    const side = r.team ? 1 : -1, row = i++ % 3;
+    r.x = clamp(c.x + side * (JK_R + 70 + row * 20), F.x0 + 30, F.x1 - 30);
+    r.y = c.y + [-90, 0, 90][row] + (r.team ? 20 : -20);
+    r.a = r.team ? Math.PI : 0;
+  }
+  REF.x = c.x; REF.y = c.y - JK_R - 70; REF.vx = REF.vy = 0;
+  freezeT = mode === 'play' ? 1.2 : .5;
+  if (mode === 'play') sfxWhistle();
+}
+const inJek = r => jek && (r === jek.a || r === jek.b);
+
+/* ---------- input (physical key codes, so Russian and other layouts work) ---------- */
+const keys = new Set();
+let throwQ = false, touchSprint = false;
+const joy = { id: null, ox: 0, oy: 0, dx: 0, dy: 0 };
+const GAME_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE'];
+let gripTaps = 0, touchGrip = false, tugSndT = 0;
+const COARSE = matchMedia('(pointer: coarse)').matches;
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (mode === 'play' && GAME_KEYS.includes(c)) e.preventDefault();
+  if ((c === 'Space' || c === 'KeyJ' || c === 'Enter') && !e.repeat && mode === 'play') { throwQ = true; if (ulak && ulak.carrier !== player) gripTaps++; }
+  if (c === 'KeyE' && !e.repeat && mode === 'play') gripTaps++;
+  if ((c === 'KeyP' || c === 'Escape') && (mode === 'play' || mode === 'paused' || mode === 'ceremony')) togglePause();
+  if (c === 'KeyM' && !e.repeat) toggleMusic();
+  if (c === 'KeyN' && !e.repeat) toggleSound();
+  keys.add(c);
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => { keys.clear(); if (mode === 'play' || mode === 'ceremony') togglePause(); });
+
+function toLogical(e) {
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+}
+cv.addEventListener('pointerdown', e => {
+  if (mode !== 'play') return;
+  if (e.pointerType === 'mouse') { throwQ = true; if (ulak && ulak.carrier !== player) gripTaps++; return; }
+  if (joy.id !== null) { throwQ = true; return; }
+  const p = toLogical(e);
+  joy.id = e.pointerId; joy.ox = p.x; joy.oy = p.y; joy.dx = joy.dy = 0;
+  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+});
+cv.addEventListener('pointermove', e => {
+  if (e.pointerId !== joy.id) return;
+  const p = toLogical(e), R = 70;
+  let dx = p.x - joy.ox, dy = p.y - joy.oy; const m = hyp(dx, dy);
+  if (m > R) { dx *= R / m; dy *= R / m; }
+  joy.dx = dx / R; joy.dy = dy / R;
+});
+const endJoy = e => { if (e.pointerId === joy.id) { joy.id = null; joy.dx = joy.dy = 0; } };
+cv.addEventListener('pointerup', endJoy); cv.addEventListener('pointercancel', endJoy);
+
+$('btnThrow').addEventListener('pointerdown', e => { e.preventDefault(); throwQ = true; if (ulak && ulak.carrier !== player) gripTaps++; });
+const gb = $('btnGrip');
+gb.addEventListener('pointerdown', e => { e.preventDefault(); touchGrip = true; gripTaps++; });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) gb.addEventListener(ev, () => { touchGrip = false; });
+const sb = $('btnSprint');
+sb.addEventListener('pointerdown', e => { e.preventDefault(); touchSprint = true; });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) sb.addEventListener(ev, () => { touchSprint = false; });
+
+function humanControl() {
+  let dx = 0, dy = 0;
+  if (keys.has('ArrowLeft') || keys.has('KeyA')) dx--;
+  if (keys.has('ArrowRight') || keys.has('KeyD')) dx++;
+  if (keys.has('ArrowUp') || keys.has('KeyW')) dy--;
+  if (keys.has('ArrowDown') || keys.has('KeyS')) dy++;
+  if (joy.id !== null) { dx += joy.dx; dy += joy.dy; }
+  const sprint = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyK') || touchSprint;
+  const thr = throwQ; throwQ = false;
+  return { dx, dy, sprint, thr, aim: null };
+}
+
+/* ---------- AI ---------- */
+function carrierControl(r) {
+  const D = DIFF[diff], enemy = KAZ[1 - r.team];
+  let ax = enemy.x - r.x, ay = enemy.y - r.y; const dist = hyp(ax, ay) || 1;
+  ax /= dist; ay /= dist;
+  for (const f of active) {
+    if (f.team === r.team) continue;
+    const fx = r.x - f.x, fy = r.y - f.y, fd = hyp(fx, fy);
+    if (fd < 150 && fd > 0) { const w = (150 - fd) / 150 * 1.3; ax += fx / fd * w; ay += fy / fd * w; }
+  }
+  const ka = Math.atan2(enemy.y - r.y, enemy.x - r.x);
+  const off = Math.abs(angDiff(r.a, ka));
+  const thr = (dist < 150 && off < .6) || dist < 105;
+  return { dx: ax, dy: ay, sprint: r.stam > .3, thr, aim: ka + (Math.random() - .5) * D.aim };
+}
+const ulakGone = () => ulak.hidden || ulak.sinkT > 0 || ulak.dead;
+/* Rotation (rule 9.6): a tired rider rides to his bench at the top touchline and swaps
+   with a fresh rider and horse waiting there. Sarmat stays in for the whole match. */
+const SUB_X = [450, 750], subCd = [0, 0];
+function wantSub(r) {
+  if (r.subbing) return true;
+  if (r === player || (r.energy ?? 1) > .35 || subCd[r.team] > 0 || inJek(r) || ulakGone()) return false;
+  if (active.some(o => o.team === r.team && o.subbing)) return false;
+  if (hyp(ulak.x - r.x, ulak.y - r.y) < 220) return false;
+  r.subbing = true;
+  return true;
+}
+function subControl(r) {
+  const tx = SUB_X[r.team], ty = F.y0 + RR + 2;
+  const dx = tx - r.x, dy = ty - r.y, d = hyp(dx, dy);
+  if (d < 26) { doSub(r); return { dx: 0, dy: 1, sprint: false, thr: false }; }
+  return { dx: dx / d, dy: dy / d, sprint: false, thr: false };
+}
+function doSub(r) {
+  const slots = BENCH.filter(b => b.kind === 'sub' && b.team === r.team);
+  const s = slots.reduce((a, b) => (b.energy > a.energy ? b : a));
+  for (const k of ['coat', 'coatDark', 'coatLight', 'num', 'energy']) { const v = r[k]; r[k] = s[k]; s[k] = v; }
+  r.subbing = false; r.stam = 1; r.cache = null; r.aiT = 0; subCd[r.team] = 12;
+  addFloat(r.x, r.y + 36, `Sub: #${s.num} off, #${r.num} on`, TEAM[r.team].trim);
+  if (mode === 'play') tone({ f: 2400, dur: .18, vol: .08, type: 'triangle', attack: .01 });
+}
+function aiControl(r, dt) {
+  const c = ulak.carrier;
+  if (c === r) { r.subbing = false; return carrierControl(r); }
+  if (wantSub(r)) return subControl(r);
+  r.aiT -= dt;
+  if (r.aiT > 0 && r.cache) return r.cache;
+  const D = DIFF[diff];
+  r.aiT = D.react * (.6 + Math.random() * .8);
+  const own = KAZ[r.team], enemy = KAZ[1 - r.team];
+  const mates = active.filter(o => o.team === r.team && o !== c);
+  const foes = active.filter(o => o.team !== r.team);
+  let tx, ty, sprint = false;
+  if (ulakGone()) { tx = r.x; ty = r.y; }
+  else if (c && c.team === r.team) {
+    const threat = nearestTo(foes, c.x, c.y);
+    const order = mates.slice().sort((a, b) => hyp(a.x - threat.x, a.y - threat.y) - hyp(b.x - threat.x, b.y - threat.y));
+    if (order.indexOf(r) === 0) { tx = threat.x + (c.x - threat.x) * .45; ty = threat.y + (c.y - threat.y) * .45; sprint = r.stam > .25; }
+    else { const rk = order.indexOf(r); tx = enemy.x + Math.sign(CX - enemy.x) * (rk === 1 ? 150 : 230); ty = CY + (rk % 2 ? -120 : 120); }
+  } else if (c) {
+    const ix = c.x + c.vx * .35, iy = c.y + c.vy * .35;
+    const order = mates.slice().sort((a, b) => hyp(a.x - ix, a.y - iy) - hyp(b.x - ix, b.y - iy));
+    if (order.indexOf(r) < 2) { tx = ix; ty = iy; sprint = r.stam > .2; }
+    else {
+      const ux = c.x - own.x, uy = c.y - own.y, ul = hyp(ux, uy) || 1;
+      const g = order.indexOf(r) === 2 ? 110 : 170;
+      tx = own.x + ux / ul * g; ty = own.y + uy / ul * g + (order.indexOf(r) === 3 ? 50 : 0); sprint = hyp(c.x - own.x, c.y - own.y) < 350;
+    }
+  } else {
+    const px = ulak.x + ulak.vx * .4, py = ulak.y + ulak.vy * .4;
+    const order = mates.slice().sort((a, b) => hyp(a.x - px, a.y - py) - hyp(b.x - px, b.y - py));
+    const rank = order.indexOf(r);
+    if (rank === 0) { tx = px; ty = py; sprint = hyp(px - r.x, py - r.y) > 110 && r.stam > .15; }
+    else if (rank === 1) {
+      const ux = own.x - px, uy = own.y - py, ul = hyp(ux, uy) || 1;
+      tx = px + ux / ul * 90; ty = py + uy / ul * 90;
+    } else {
+      const ux = px - own.x, uy = py - own.y, ul = hyp(ux, uy) || 1;
+      const g = rank === 2 ? 150 : 260;
+      tx = own.x + ux / ul * g; ty = own.y + uy / ul * g + (rank === 3 ? (r.idx % 2 ? -70 : 70) : 0);
+    }
+  }
+  if (jek && !inJek(r)) {
+    const jx = tx - jek.x, jy = ty - jek.y, jd = hyp(jx, jy) || 1;
+    if (jd < JK_R + 60) { tx = jek.x + jx / jd * (JK_R + 70); ty = jek.y + jy / jd * (JK_R + 70); }
+  }
+  tx = clamp(tx, F.x0 + 30, F.x1 - 30); ty = clamp(ty, F.y0 + 30, F.y1 - 30);
+  let dx = tx - r.x, dy = ty - r.y; const dd = hyp(dx, dy);
+  if (dd < 12) { dx = dy = 0; } else { dx /= dd; dy /= dd; if (dd < 60) { dx *= dd / 60; dy *= dd / 60; } }
+  for (const k of KAZ) {
+    const kx = r.x - k.x, ky = r.y - k.y, kd = hyp(kx, ky);
+    if (kd < KR + 70 && kd > 0) { const w = (KR + 70 - kd) / 70 * 1.1; dx += kx / kd * w; dy += ky / kd * w; }
+  }
+  r.cache = { dx, dy, sprint, thr: false, aim: 0 };
+  return r.cache;
+}
+
+/* ---------- physics ---------- */
+function bound(r) {
+  if (r.x < F.x0 + RR) { r.x = F.x0 + RR; r.vx = Math.abs(r.vx) * .3; }
+  if (r.x > F.x1 - RR) { r.x = F.x1 - RR; r.vx = -Math.abs(r.vx) * .3; }
+  if (r.y < F.y0 + RR) { r.y = F.y0 + RR; r.vy = Math.abs(r.vy) * .3; }
+  if (r.y > F.y1 - RR) { r.y = F.y1 - RR; r.vy = -Math.abs(r.vy) * .3; }
+  for (const k of KAZ) {
+    const dx = r.x - k.x, dy = r.y - k.y, d = hyp(dx, dy), m = KR + RR - 2;
+    if (d < m && d > 0) {
+      r.x = k.x + dx / d * m; r.y = k.y + dy / d * m;
+      const vn = (r.vx * dx + r.vy * dy) / d;
+      if (vn < 0) { r.vx -= vn * dx / d * 1.2; r.vy -= vn * dy / d * 1.2; }
+    }
+  }
+  if (jek && !inJek(r)) {
+    const dx = r.x - jek.x, dy = r.y - jek.y, d = hyp(dx, dy) || 1, m = JK_R + RR;
+    if (d < m) { r.x = jek.x + dx / d * m; r.y = jek.y + dy / d * m; }
+  }
+}
+function move(r, c, dt, human) {
+  const D = DIFF[diff];
+  let dx = c.dx, dy = c.dy; const m = hyp(dx, dy); let mag = 0;
+  if (m > .05) { mag = Math.min(1, m); dx /= m; dy /= m; } else { dx = dy = 0; }
+  let top = 185 * (human ? 1 : (r.team === 1 ? D.ai : .97));
+  if (!human) top *= .82 + .18 * (r.energy ?? 1);
+  const sp = c.sprint && r.stam > .03 && mag > .3;
+  if (sp) { top *= 1.42; r.stam = Math.max(0, r.stam - .34 * dt); }
+  else r.stam = Math.min(1, r.stam + .16 * dt);
+  if (!human && r !== player) {
+    const tugging = ulak.tugOn && (ulak.carrier === r || (ulak.tugSet && ulak.tugSet.has(r)));
+    r.energy = Math.max(0, (r.energy ?? 1) - dt * (.006 + (sp ? .02 : 0) + (tugging ? .015 : 0)));
+  }
+  if (ulak.carrier === r) top *= human ? .92 : .85;
+  if (ulak.tugOn && (ulak.carrier === r || (ulak.tugSet && ulak.tugSet.has(r)))) top *= .72;
+  const f = Math.min(1, (mag > 0 ? (human ? 3.2 : 2.6) : 1.6) * dt);
+  r.vx += (dx * top * mag - r.vx) * f; r.vy += (dy * top * mag - r.vy) * f;
+  const s = hyp(r.vx, r.vy);
+  if (s > 10) r.a = wrap(r.a + angDiff(r.a, Math.atan2(r.vy, r.vx)) * Math.min(1, dt * (human ? 10 : 8)));
+  const prev = r.phase;
+  r.x += r.vx * dt; r.y += r.vy * dt; r.phase += s * dt * .06;
+  if (mode === 'play' && s > 25) {
+    const offs = human ? [0, .6, 1.2] : (s > 140 ? [0] : []);
+    for (const o of offs) if (Math.floor((r.phase - o) / TAU) > Math.floor((prev - o) / TAU)) hoof(human ? Math.min(1, s / 260) : .16);
+  }
+  if (human) { if (sp && !r.wasSprint) sfxSnort(); r.wasSprint = sp; }
+  r.pickCd = Math.max(0, r.pickCd - dt); r.immune = Math.max(0, r.immune - dt);
+  r.throwT = Math.max(0, r.throwT - dt); r.grabT = Math.max(0, r.grabT - dt);
+  if (!reduce && s > 150 && Math.random() < dt * 14) dust(r);
+  bound(r);
+}
+function collide(dt) {
+  const D = DIFF[diff];
+  foulCd = Math.max(0, foulCd - dt);
+  for (let i = 0; i < active.length; i++) for (let j = i + 1; j < active.length; j++) {
+    const a = active[i], b = active[j];
+    let dx = b.x - a.x, dy = b.y - a.y; const d = hyp(dx, dy) || .01, min = RR * 2;
+    if (d < min) {
+      const o = (min - d) / 2; dx /= d; dy /= d;
+      a.x -= dx * o; a.y -= dy * o; b.x += dx * o; b.y += dy * o;
+      const rv = (b.vx - a.vx) * dx + (b.vy - a.vy) * dy;
+      if (rv < 0) { const imp = rv * .5; a.vx += imp * dx; a.vy += imp * dy; b.vx -= imp * dx; b.vy -= imp * dy; }
+      /* Rule: no ramming at speed into a rider who is picking up or holding the ulak. */
+      if (mode === 'play' && a.team !== b.team && rv < -230 && foulCd <= 0) {
+        const victim = a.team === 0 ? a : b, offender = victim === a ? b : a;
+        if ((victim.grabT > 0 || ulak.carrier === victim) && Math.random() < .55) { foul(offender); return; }
+      }
+    }
+  }
+}
+/* Snatching a 30 kg ulak is a tug-of-war. A rival riding alongside the carrier grips it
+   and pulls; the carrier holds on. The bar fills toward the rival; at full, he has it. */
+const TUG_D = 50, TUG_D_PLAYER = 62;
+function updateTug(dt) {
+  const u = ulak, c = u.carrier;
+  const taps = gripTaps; gripTaps = 0;
+  const held = keys.has('KeyE') || touchGrip;
+  u.tugOn = false; u.tugBy = null; u.tugSet = null;
+  if (!c) { u.tugP = 0; return; }
+  const human = mode === 'play';
+  const foes = active.filter(o => o.team !== c.team && hyp(o.x - c.x, o.y - c.y) < (o === player && human ? TUG_D_PLAYER : TUG_D));
+  if (!foes.length || c.immune > 0) { u.tugP = Math.max(0, (u.tugP || 0) - dt * .35); return; }
+  const D = DIFF[diff];
+  const main = foes.includes(player) && human ? player : nearestTo(foes, c.x, c.y);
+  u.tugOn = true; u.tugBy = main; u.tugSet = new Set(foes);
+  let pull = 0;
+  for (const f of foes) {
+    const p = f === player && human ? (held ? .3 : .12) : f.team === 1 ? D.pull : .26;
+    pull += f === main ? p : p * .6;
+  }
+  let resist = c === player && human ? (held ? .3 : 0) : c.team === 1 ? D.resist : .12;
+  for (const m of active) if (m !== c && m.team === c.team && hyp(m.x - c.x, m.y - c.y) < TUG_D + 12) resist += .06;
+  let tapPush = 0;
+  if (human && u.tugSet.has(player)) tapPush += taps * .075;   /* each tap is a hard yank */
+  if (human && c === player) tapPush -= taps * .06;
+  u.tugP = clamp((u.tugP || 0) + (pull - resist) * dt + tapPush, 0, 1);
+  /* the heavy carcass binds the two riders together while they fight for it */
+  for (const f of foes) {
+    const dx = c.x - f.x, dy = c.y - f.y, d = hyp(dx, dy) || 1;
+    if (d > RR * 2 + 2) { const k = Math.min(1, dt * 2.2) * (d - RR * 2) * .5; f.x += dx / d * k; f.y += dy / d * k; c.x -= dx / d * k; c.y -= dy / d * k; }
+  }
+  if (human && (c === player || u.tugSet.has(player))) {
+    tugSndT -= dt;
+    if (tugSndT <= 0) { tugSndT = .42 + Math.random() * .2; noiseBurst({ type: 'bandpass', f: 260, f2: 160, dur: .22, vol: .2, q: 3, attack: .03 }); }
+  }
+  if (u.tugP >= 1) {
+    u.carrier = main; main.immune = main === player && human ? 1.6 : 1.1; c.pickCd = .8; u.thrower = null;
+    main.grabT = .3; u.tugP = 0; u.tugOn = false; u.tugSet = null; u.tugBy = null;
+    addFloat(main.x, main.y - 40, 'Snatched!', TEAM[main.team].trim);
+    crowdHype = Math.max(crowdHype, .6);
+    if (human && (main === player || c === player)) sfxSnatch();
+  }
+}
+/* free throw with physics (AI throws and off-target player throws) */
+function doThrow(r, aim, human) {
+  const u = ulak; u.carrier = null;
+  const carry = human ? 0 : .4;
+  u.vx = Math.cos(aim) * 290 + r.vx * carry; u.vy = Math.sin(aim) * 290 + r.vy * carry;
+  u.z = 12; u.vz = 200; r.pickCd = .55; u.thrower = r; r.throwT = .38;
+  if (mode === 'play') sfxThrow(human ? 1 : .4);
+}
+/* Player throws lock onto the kazan when close enough and roughly facing it. */
+function lockInfo(r) {
+  const K = KAZ[1 - r.team];
+  const ka = Math.atan2(K.y - r.y, K.x - r.x), d = hyp(K.x - r.x, K.y - r.y), off = Math.abs(angDiff(r.a, ka));
+  return { ok: d < LOCK_R && (off < 1.45 || d < 130), d, ka, K, k: 1 - r.team };
+}
+function playerThrow(r, dunk) {
+  const L = lockInfo(r);
+  if (!L.ok) { doThrow(r, r.a, true); return; }
+  const u = ulak;
+  u.carrier = null; u.thrower = r; r.pickCd = .6; r.throwT = .38;
+  const dur = dunk ? .4 : clamp(L.d / 360, .38, .55);
+  u.fly = { sx: u.x, sy: u.y, tx: L.K.x, ty: L.K.y, t: 0, dur, h: dunk ? 38 : 26 + L.d * .12, k: L.k };
+  u.trail.length = 0;
+  sfxThrow(1);
+  if (dunk) addFloat(r.x, r.y - 40, 'In it goes!', '#e0a83c');
+}
+function pushTrail(u) { u.trail.push({ x: u.x, y: u.y, z: u.z }); if (u.trail.length > 12) u.trail.shift(); }
+function updateUlak(dt) {
+  const u = ulak; if (u.hidden || u.dead) return;
+  if (u.sinkT > 0) { u.sinkT -= dt; if (u.trail.length) u.trail.shift(); if (u.sinkT <= 0) u.hidden = true; return; }
+  if (u.fly) {
+    const f = u.fly; f.t = Math.min(1, f.t + dt / f.dur);
+    const p = f.t;
+    u.x = f.sx + (f.tx - f.sx) * p; u.y = f.sy + (f.ty - f.sy) * p;
+    u.z = 10 * (1 - p) + Math.sin(Math.PI * p) * f.h;
+    u.rot += dt * 12;
+    pushTrail(u);
+    if (p >= 1) { u.fly = null; goal(f.k); }
+    return;
+  }
+  if (u.carrier) {
+    const c = u.carrier, s = Math.sin(c.a), co = Math.cos(c.a);
+    u.x = c.x + co * 4 - s * 15; u.y = c.y + s * 4 + co * 15; u.z = 6; u.vz = 0; u.vx = c.vx; u.vy = c.vy; u.rot = c.a;
+    if (u.tugOn && u.tugBy) {
+      const f = u.tugBy, k = .3 + .45 * (u.tugP || 0);
+      u.x += ((c.x + f.x) / 2 - u.x) * k; u.y += ((c.y + f.y) / 2 - u.y) * k;
+      if (!reduce) { u.x += (Math.random() - .5) * 2; u.y += (Math.random() - .5) * 2; }
+    }
+    if (u.trail.length) u.trail.shift();
+    return;
+  }
+  const px = u.x, py = u.y;
+  u.x += u.vx * dt; u.y += u.vy * dt;
+  if (u.z > 0 || u.vz > 0) {
+    u.vz -= 900 * dt; u.z += u.vz * dt; u.rot += dt * 9; pushTrail(u);
+    if (u.z <= 0) { u.z = 0; u.vz = u.vz < -160 ? -u.vz * .22 : 0; u.vx *= .55; u.vy *= .55; if (!reduce) puff(u.x, u.y); }
+  } else {
+    const fr = Math.exp(-3.4 * dt); u.vx *= fr; u.vy *= fr;
+    if (u.trail.length) u.trail.shift();
+    if (hyp(u.vx, u.vy) > 20) u.rot = Math.atan2(u.vy, u.vx);
+  }
+  if (u.x < F.x0 || u.x > F.x1 || u.y < F.y0 || u.y > F.y1) { outOfBounds(); return; }
+  for (let k = 0; k < 2; k++) {
+    const K = KAZ[k];
+    const hole = u.thrower === player && mode === 'play' ? KHOLE + 18 : KHOLE;
+    if ((u.z > 0 || u.vz !== 0) && segDist(px, py, u.x, u.y, K.x, K.y) < hole) { goal(k); return; }
+    const dx = u.x - K.x, dy = u.y - K.y, d = hyp(dx, dy) || 1;
+    if (d < KR + 4) {
+      const m = KR + 4; u.x = K.x + dx / d * m; u.y = K.y + dy / d * m;
+      const vn = (u.vx * dx + u.vy * dy) / d;
+      if (vn < 0) { u.vx -= 1.6 * vn * dx / d; u.vy -= 1.6 * vn * dy / d; }
+    }
+  }
+  if (u.z < 20) {
+    let best = null, bd = 32;
+    for (const r of active) {
+      if (r.pickCd > 0 || r.subbing || (jek && !inJek(r))) continue;
+      const reach = r === player && mode === 'play' ? 40 : 32;
+      const d = hyp(r.x - u.x, r.y - u.y); if (d < reach && d < bd + (reach - 32)) { bd = d; best = r; }
+    }
+    if (best) {
+      u.carrier = best; best.immune = .7; best.grabT = .3; u.vz = 0; u.z = 6; u.thrower = null; u.trail.length = 0; u.tugP = 0;
+      if (best === player && mode === 'play') { best.immune = 1.4; addFloat(best.x, best.y - 40, 'Ulak!', '#e0a83c'); sfxPickup(1); }
+      else if (mode === 'play') sfxPickup(.35);
+    }
+  }
+}
+
+/* ---------- referee ---------- */
+function updateRef(dt) {
+  const R = REF;
+  let tx = R.x, ty = R.y;
+  if (ulak && !ulakGone()) {
+    tx = ulak.x - Math.sign(ulak.x - CX) * 70;
+    ty = ulak.y + (ulak.y < CY ? 140 : -140);
+  }
+  tx = clamp(tx, F.x0 + 40, F.x1 - 40); ty = clamp(ty, F.y0 + 40, F.y1 - 40);
+  let dx = tx - R.x, dy = ty - R.y; const d = hyp(dx, dy);
+  let mag = d < 20 ? 0 : Math.min(1, d / 160);
+  if (d > 0) { dx /= d; dy /= d; }
+  for (const o of active) {
+    const ox = R.x - o.x, oy = R.y - o.y, od = hyp(ox, oy);
+    if (od < 80 && od > 0) { const w = (80 - od) / 80 * 1.6; dx += ox / od * w; dy += oy / od * w; mag = Math.max(mag, .7); }
+  }
+  for (const k of KAZ) {
+    const kx = R.x - k.x, ky = R.y - k.y, kd = hyp(kx, ky);
+    if (kd < KR + 70 && kd > 0) { const w = (KR + 70 - kd) / 70; dx += kx / kd * w; dy += ky / kd * w; }
+  }
+  const m = hyp(dx, dy) || 1, top = 205;
+  const f = Math.min(1, 2.4 * dt);
+  R.vx += (dx / m * top * mag - R.vx) * f; R.vy += (dy / m * top * mag - R.vy) * f;
+  const s = hyp(R.vx, R.vy);
+  if (s > 10) R.a = wrap(R.a + angDiff(R.a, Math.atan2(R.vy, R.vx)) * Math.min(1, dt * 7));
+  R.x += R.vx * dt; R.y += R.vy * dt; R.phase += s * dt * .06;
+  bound(R);
+  R.flagT = Math.max(0, (R.flagT || 0) - dt);
+  R.armUp = pauseT > 0 || R.flagT > 0;
+}
+
+/* ---------- match flow ---------- */
+let pendingJek = null;
+function foul(o) {
+  foulCd = 8;
+  if (ulak.carrier === o) { ulak.carrier = null; ulak.vx = ulak.vy = 0; }
+  o.pen = PEN_TIME; o.vx = o.vy = 0;
+  active = riders.filter(onField);
+  addFloat(o.x, o.y - 40, `Foul! ${TEAM[o.team].name} #${o.num} to the box`, '#e8c22c');
+  REF.flagT = 1.4; crowdHype = Math.max(crowdHype, .6);
+  tone({ f: 2700, dur: .3, vol: .13, type: 'triangle', attack: .01 });
+}
+function outOfBounds() {
+  const u = ulak;
+  u.x = clamp(u.x, F.x0 + 10, F.x1 - 10); u.y = clamp(u.y, F.y0 + 10, F.y1 - 10);
+  u.vx = u.vy = 0; u.z = 0; u.vz = 0; u.trail.length = 0; u.dead = true;
+  pendingJek = JK.reduce((b, k) => Math.abs(k.x - u.x) < Math.abs(b.x - u.x) ? k : b);
+  banner = { text: 'Out', sub: 'Jekeme-jeke · one on one in the circle', t: 1.6, max: 1.6, color: '#efe2c4' };
+  pauseT = 1.3; pauseNext = 'jekeme';
+  if (mode === 'play') tone({ f: 2600, dur: .4, vol: .13, type: 'triangle', attack: .01 });
+}
+function goal(k) {
+  const t = 1 - k, K = KAZ[k];
+  if (mode !== 'over') score[t]++;
+  const mine = mode === 'play' && ulak.thrower === player && t === 0;
+  const u = ulak;
+  u.carrier = null; u.fly = null; u.x = K.x; u.y = K.y; u.z = 0; u.vx = u.vy = 0; u.vz = 0; u.sinkT = .45;
+  burst(K.x, K.y, TEAM[t]);
+  parts.push({ x: K.x, y: K.y, life: .7, max: .7, kind: 2, col: TEAM[t].trim, r: KR });
+  parts.push({ x: K.x, y: K.y, life: .9, max: .9, kind: 2, col: '#f2e8d2', r: KR + 10 });
+  const sub = mine ? 'Adil and Sarmat score' : `${TEAM[t].name} score`;
+  banner = { text: 'Salym!', sub: `${sub} · ${score[0]}–${score[1]}`, t: 2, max: 2, color: TEAM[t].color };
+  pauseT = 2;
+  lastScorer = t; crowdHype = 1;
+  if (!reduce) { shakeT = .4; flashT = .25; }
+  pauseNext = (mode === 'play' && (score[t] >= WIN || overtime)) ? 'end' : 'kickoff';
+  if (mode === 'attract' && score[t] >= WIN) score = [0, 0];
+  if (mode === 'play') {
+    sfxThud();
+    tone({ t: .1, f: 2700, dur: .35, vol: .12, type: 'triangle', attack: .01 });
+    duckT = 2.6;
+    if (t === 0) { sfxRoar(mine ? .55 : .4, 2.4); komuz(true); }
+    else { sfxRoar(.16, 1.2); komuz(false); }
+  }
+}
+function endMatch() {
+  const wasPlaying = mode === 'play';
+  mode = 'over'; stage.classList.remove('playing');
+  const [a, b] = score;
+  $('endEyebrow').textContent = overtime ? 'Golden ulak' : (a >= WIN || b >= WIN ? `First to ${WIN}` : 'Full time');
+  $('endTitle').textContent = a > b ? `Talas win ${a}–${b}` : a < b ? `Chüy win ${b}–${a}` : `Level at ${a}–${b}`;
+  $('endText').textContent = a > b ? 'Sarmat carried it home for Talas. Try a harder Chüy side next.' : a < b ? 'Chüy outrode you this time. Save Sarmat\'s sprint for the run at their kazan.' : 'Neither side broke through.';
+  if (wasPlaying) { sfxWhistle(); if (a > b) { komuz(true, .9); sfxRoar(.5, 2.8, .9); } }
+  show('ovEnd');
+  kickoff();
+}
+function show(id) { for (const o of ['ovStart', 'ovPause', 'ovEnd']) $(o).hidden = o !== id; }
+function startMatch() {
+  audioInit(); musicPlay(true);
+  mode = 'play'; score = [0, 0]; clock = PERIOD_LEN; period = 1; overtime = false; banner = null; pauseT = 0;
+  firstKick = true; foulCd = 0;
+  for (const r of riders) r.pen = 0;
+  active = riders.slice();
+  parts.length = 0; floats.length = 0; throwQ = false; keys.clear();
+  for (const r of riders) { r.stam = 1; r.energy = 1; r.subbing = false; }
+  for (const b of BENCH) if (b.kind === 'sub') b.energy = 1;
+  subCd[0] = subCd[1] = 0;
+  startCeremony(); show(null); stage.classList.add('playing');
+  try { window.focus(); cv.focus({ preventScroll: true }); } catch (_) {}
+}
+function togglePause() {
+  if (mode === 'play' || mode === 'ceremony') { pausedFrom = mode; mode = 'paused'; $('btnSkip').hidden = true; show('ovPause'); $('btnResume').focus(); if (Snd.ac) Snd.ac.suspend().catch(() => {}); music.pause(); }
+  else if (mode === 'paused') { mode = pausedFrom; show(null); if (mode === 'ceremony') $('btnSkip').hidden = !cerSeen; if (Snd.ac) Snd.ac.resume().catch(() => {}); musicPlay(false); try { cv.focus({ preventScroll: true }); } catch (_) {} }
+}
+function toMenu() {
+  cer = null; ELDER.show = false; fanArms = 0; bataHands = 0; ominOn = false; REF.pose = null; $('btnSkip').hidden = true;
+  for (const r of riders) { r.pen = 0; r.pose = null; }
+  active = riders.slice();
+  mode = 'attract'; score = [0, 0]; stage.classList.remove('playing'); kickoff(); show('ovStart');
+  if (Snd.ac) { Snd.ac.resume().catch(() => {}); musicPlay(false); }
+}
+const btnSound = $('btnSound');
+function paintSound() { btnSound.textContent = Snd.on ? 'Sound on' : 'Sound off'; btnSound.setAttribute('aria-pressed', Snd.on ? 'true' : 'false'); }
+function toggleSound() {
+  Snd.on = !Snd.on;
+  try { localStorage.setItem('kb-sound', Snd.on ? 'on' : 'off'); } catch (_) {}
+  if (Snd.on) audioInit();
+  if (Snd.master) Snd.master.gain.value = Snd.on ? .8 : 0;
+  paintSound();
+}
+btnSound.addEventListener('click', toggleSound);
+paintSound();
+const btnMusic = $('btnMusic');
+function paintMusic() { btnMusic.textContent = musicOn ? 'Anthem on' : 'Anthem off'; btnMusic.setAttribute('aria-pressed', musicOn ? 'true' : 'false'); }
+function toggleMusic() {
+  musicOn = !musicOn;
+  try { localStorage.setItem('kb-music', musicOn ? 'on' : 'off'); } catch (_) {}
+  if (musicOn && mode !== 'paused') musicPlay(false); else music.pause();
+  paintMusic();
+}
+btnMusic.addEventListener('click', toggleMusic);
+paintMusic();
+$('btnSkip').addEventListener('click', () => { if (mode === 'ceremony') endCeremony(); });
+$('btnStart').addEventListener('click', startMatch);
+$('btnAgain').addEventListener('click', startMatch);
+$('btnResume').addEventListener('click', togglePause);
+$('btnQuit').addEventListener('click', toMenu);
+$('btnMenu').addEventListener('click', toMenu);
+for (const b of document.querySelectorAll('.seg button')) b.addEventListener('click', () => {
+  diff = b.dataset.d;
+  for (const o of document.querySelectorAll('.seg button')) o.setAttribute('aria-pressed', o === b ? 'true' : 'false');
+});
+
+/* ---------- particles ---------- */
+function dust(r) {
+  parts.push({ x: r.x - Math.cos(r.a) * 22 + (Math.random() - .5) * 10, y: r.y - Math.sin(r.a) * 22 + (Math.random() - .5) * 10,
+    vx: -r.vx * .1 + (Math.random() - .5) * 20, vy: -r.vy * .1 + (Math.random() - .5) * 20, life: 1.7, max: 1.7, r: 4 + Math.random() * 5, kind: 0 });
+}
+function puff(x, y) { for (let i = 0; i < 6; i++) parts.push({ x, y, vx: (Math.random() - .5) * 80, vy: (Math.random() - .5) * 80, life: .5, max: .5, r: 3 + Math.random() * 4, kind: 0 }); }
+function burst(x, y, T) {
+  const cols = [T.color, '#e0a83c', '#f2e8d2', T.dark], n = reduce ? 14 : 60;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * TAU, s = 80 + Math.random() * 300, l = 1.1 + Math.random() * .8;
+    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: l, max: l, r: 3 + Math.random() * 4, kind: 1, col: cols[i % 4], rot: Math.random() * 6, vr: (Math.random() - .5) * 10 });
+  }
+  if (!reduce) for (let i = 0; i < 18; i++) { const a = Math.random() * TAU; parts.push({ x: x + Math.cos(a) * 50, y: y + Math.sin(a) * 50, vx: Math.cos(a) * 90, vy: Math.sin(a) * 90, life: .9, max: .9, r: 8 + Math.random() * 8, kind: 0 }); }
+}
+function addFloat(x, y, text, col) { floats.push({ x, y, text, col, life: 1.1 }); }
+function updateParticles(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.life -= dt;
+    if (p.life <= 0) { parts.splice(i, 1); continue; }
+    if (p.kind === 2) continue;
+    const dr = Math.exp(-(p.kind ? 2.2 : 3) * dt);
+    if (!p.kind) p.vy -= 6 * dt;
+    p.vx *= dr; p.vy *= dr; p.x += p.vx * dt; p.y += p.vy * dt; if (p.kind) p.rot += p.vr * dt;
+  }
+  if (parts.length > 480) parts.splice(0, parts.length - 480);
+  for (let i = floats.length - 1; i >= 0; i--) { const f = floats[i]; f.life -= dt; f.y -= 30 * dt; if (f.life <= 0) floats.splice(i, 1); }
+}
+
+/* ---------- opening ceremony (federation rule 8.2) ----------
+   While the Kök Börü anthem plays, the teams line up on the field, ride around
+   the tai-kazans, greet each other in the middle, and line up in front of the
+   people to receive the bata (blessing). Only then does the match start. */
+const LINE_Y = 200, BLESS_Y = 585, TRAIN_V = 165, GAP = 60;
+const GREET_Y = [CY - 135, CY - 45, CY + 45, CY + 135];
+const STEPS = ['Line up', 'Tai-kazans', 'Greeting', 'Bata', 'Start line'];
+const ELDER = { x: 600, y: 716, ty: 716, show: false };
+let cer = null, cerSeen = false, fanArms = 0, pausedFrom = 'play', bataHands = 0, ominOn = false;
+let cerPts = null, cerCum = null, cerLen = 0;
+const mirrorX = (t, x) => t ? W - x : x;
+function buildCerPath() {
+  const pts = [[510, LINE_Y]];
+  const lineTo = (x1, y1) => {
+    const [x0, y0] = pts[pts.length - 1], n = Math.max(1, Math.ceil(hyp(x1 - x0, y1 - y0) / 5));
+    for (let i = 1; i <= n; i++) pts.push([x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n]);
+  };
+  const quadTo = (cx, cy, x1, y1) => {
+    const [x0, y0] = pts[pts.length - 1];
+    for (let i = 1; i <= 40; i++) { const t = i / 40, u = 1 - t; pts.push([u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1]); }
+  };
+  lineTo(330, LINE_Y);
+  quadTo(240, LINE_Y + 15, 240, CY);
+  for (let i = 1; i <= 120; i++) { const th = i / 120 * TAU; pts.push([150 + 90 * Math.cos(th), CY + 90 * Math.sin(th)]); }
+  quadTo(240, CY + 90, 330, CY + 90);
+  lineTo(430, CY + 90);
+  cerPts = pts; cerCum = [0];
+  for (let i = 1; i < pts.length; i++) cerCum.push(cerCum[i - 1] + hyp(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  cerLen = cerCum[cerCum.length - 1];
+}
+function pathAt(s) {
+  s = clamp(s, 0, cerLen);
+  let lo = 0, hi = cerCum.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cerCum[m] < s) lo = m; else hi = m; }
+  const f = (s - cerCum[lo]) / ((cerCum[hi] - cerCum[lo]) || 1);
+  return [cerPts[lo][0] + (cerPts[hi][0] - cerPts[lo][0]) * f, cerPts[lo][1] + (cerPts[hi][1] - cerPts[lo][1]) * f];
+}
+function phases() {
+  return [
+    { key: 'enter', dur: 4.2, step: 0, cap: 'The teams ride out and line up' },
+    { key: 'line', dur: 1.6, step: 0, cap: 'The teams ride out and line up' },
+    { key: 'kazan', dur: (cerLen - 180) / TRAIN_V + .8, step: 1, cap: 'Around the tai-kazans' },
+    { key: 'greetGo', dur: 3.2, step: 2, cap: 'The teams greet each other' },
+    { key: 'greet', dur: 2.6, step: 2, cap: 'The teams greet each other' },
+    { key: 'blessGo', dur: 3.8, step: 3, cap: 'Bata: the people bless the riders' },
+    { key: 'bless', dur: 5.6, step: 3, cap: 'Bata: the people bless the riders' },
+    { key: 'positions', dur: 2.6, step: 4, cap: 'To the start line' }
+  ];
+}
+function steer(r, tx, ty, face, dt, maxV = 230) {
+  const dx = tx - r.x, dy = ty - r.y, d = hyp(dx, dy);
+  const want = Math.min(maxV, d * 4.5);
+  const vx = d > .5 ? dx / d * want : 0, vy = d > .5 ? dy / d * want : 0;
+  const f = Math.min(1, dt * 6);
+  r.vx += (vx - r.vx) * f; r.vy += (vy - r.vy) * f;
+  r.x += r.vx * dt; r.y += r.vy * dt;
+  const s = hyp(r.vx, r.vy), prev = r.phase;
+  r.phase += s * dt * .06;
+  const goal = s > 25 ? Math.atan2(r.vy, r.vx) : face;
+  if (goal != null) r.a = wrap(r.a + angDiff(r.a, goal) * Math.min(1, dt * 6));
+  if (r === player && s > 25 && Math.floor(r.phase / TAU) > Math.floor(prev / TAU)) hoof(.35);
+  if (!reduce && s > 150 && Math.random() < dt * 8) dust(r);
+}
+function startCeremony() {
+  if (!cerPts) buildCerPath();
+  mode = 'ceremony';
+  cer = { i: 0, t: 0, ph: phases(), fired: {} };
+  ulak = newUlak(); ulak.hidden = true; jek = null;
+  for (const r of riders) {
+    r.x = mirrorX(r.team, -20 - 60 * (3 - r.idx)); r.y = LINE_Y - 80;
+    r.vx = r.vy = 0; r.a = r.team ? Math.PI : 0; r.pose = null; r.throwT = 0; r.pickCd = 0;
+  }
+  REF.x = CX; REF.y = -30; REF.vx = REF.vy = 0; REF.a = Math.PI / 2; REF.flagT = 0;
+  ELDER.show = false; ELDER.y = ELDER.ty = 716; fanArms = 0; bataHands = 0; ominOn = false; REF.pose = null;
+  $('btnSkip').hidden = !cerSeen;
+}
+function endCeremony() {
+  cerSeen = true; cer = null; ELDER.show = false; fanArms = 0; bataHands = 0; ominOn = false; REF.pose = null;
+  for (const r of riders) r.pose = null;
+  $('btnSkip').hidden = true;
+  mode = 'play';
+  kickoff();
+}
+function once(key) { if (cer.fired[key]) return false; cer.fired[key] = true; return true; }
+function updateCeremony(dt) {
+  const ph = cer.ph;
+  cer.t += dt;
+  if (cer.t >= ph[cer.i].dur) {
+    cer.t -= ph[cer.i].dur; cer.i++;
+    if (cer.i >= ph.length) { endCeremony(); return; }
+  }
+  const key = ph[cer.i].key, t = cer.t;
+  for (const r of riders) {
+    let tx, ty, face = null;
+    r.pose = null;
+    switch (key) {
+      case 'enter': case 'line':
+        tx = mirrorX(r.team, 330 + GAP * r.idx); ty = LINE_Y; face = Math.PI / 2; break;
+      case 'kazan': {
+        const p = pathAt(Math.min(180 + TRAIN_V * t, cerLen) - GAP * r.idx);
+        tx = mirrorX(r.team, p[0]); ty = p[1]; break;
+      }
+      case 'greetGo': case 'greet': {
+        const Y = GREET_Y[3 - r.idx];
+        tx = r.team ? CX + 22 : CX - 22; ty = r.team ? Y + 14 : Y - 14; face = r.team ? Math.PI : 0;
+        if (key === 'greet' && t > .3) r.pose = 'greet';
+        break;
+      }
+      case 'blessGo': case 'bless':
+        tx = r.team ? 660 + GAP * r.idx : 540 - GAP * r.idx; ty = BLESS_Y; face = Math.PI / 2;
+        if (key === 'bless') r.pose = t > .8 && t < 4.1 ? 'bata' : t >= 4.1 && t < 4.9 ? 'omin' : null;
+        break;
+      case 'positions': {
+        const ys = [CY - 45, CY - 135, CY + 45, CY + 135];
+        tx = CX + (r.team ? 210 : -210); ty = ys[r.idx]; face = r.team ? Math.PI : 0; break;
+      }
+    }
+    steer(r, tx, ty, face, dt);
+  }
+  /* referee */
+  const refSpot = { enter: [CX, LINE_Y + 40], line: [CX, LINE_Y + 40], kazan: [CX, LINE_Y + 40], greetGo: [CX, GREET_Y[0] - 85],
+    greet: [CX, GREET_Y[0] - 85], blessGo: [CX, BLESS_Y], bless: [CX, BLESS_Y], positions: [CX, CY - 190] }[key];
+  steer(REF, refSpot[0], refSpot[1], Math.PI / 2, dt, 200);
+  REF.armUp = false;
+  /* bata from the seats: hands held together, then passed over the face at "Oomiyin" */
+  const together = key === 'bless' && t > .8 && t < 4.9;
+  ominOn = key === 'bless' && t >= 4.1 && t < 4.9;
+  bataHands += ((together ? 1 : 0) - bataHands) * Math.min(1, dt * 5);
+  REF.pose = key === 'bless' ? (t > .8 && t < 4.1 ? 'bata' : ominOn ? 'omin' : null) : null;
+  if (key === 'bless') crowdHype = Math.min(crowdHype, t < 4.9 ? 0 : 1);
+  /* moments */
+  if (key === 'line' && once('line')) tone({ f: 2600, dur: .25, vol: .1, type: 'triangle', attack: .01 });
+  if (key === 'greet' && t > .4 && once('greet')) {
+    for (const k of [0, 2]) addFloat(CX, GREET_Y[k] - 30, 'Salam!', '#efe2c4');
+    sfxRoar(.14, 1.4); crowdHype = .4;
+  }
+  if (key === 'bless' && t > .8 && once('bata')) addFloat(CX, F.y1 - 4, 'Bata', '#e0a83c');
+  if (key === 'bless' && t > 4.1 && once('omin')) addFloat(CX, F.y1 - 4, 'Oomiyin!', '#e0a83c');
+  if (key === 'bless' && t > 4.9 && once('cheer')) { sfxRoar(.28, 1.8); crowdHype = .6; }
+  updateRefFlag(dt);
+}
+function updateRefFlag(dt) { REF.flagT = Math.max(0, (REF.flagT || 0) - dt); }
+function drawElder() {
+  if (!ELDER.show) return;
+  const up = fanArms, sw = up > .1 ? up : Math.sin(simTime * 6) * .15;
+  for (const [dx, dy, sc, coat] of [[-34, 8, 1.25, '#5b4636'], [34, 8, 1.25, '#3f4a5c'], [0, 0, 1.55, '#e9e1d0']]) {
+    ctx.save(); ctx.translate(ELDER.x + dx, ELDER.y + dy); ctx.scale(sc, sc);
+    drawPerson(0, 0, coat, '#b8372d', true, sw);
+    ctx.restore();
+  }
+}
+function drawCaption() {
+  if (!cer) return;
+  const P = cer.ph[cer.i]; if (!P) return;
+  ctx.font = `800 19px ${DISPLAY}`;
+  const capW = ctx.measureText(P.cap).width;
+  ctx.font = `600 12px ${BODY}`;
+  const ws = STEPS.map(s => ctx.measureText(s).width), gap = 22;
+  const stepsW = ws.reduce((a, b) => a + b, 0) + gap * (STEPS.length - 1);
+  const w = Math.max(capW, stepsW) + 56, x0 = CX - w / 2, y0 = F.y0 + 8;
+  ctx.fillStyle = 'rgba(19,26,43,.84)'; ctx.fillRect(x0, y0, w, 58);
+  ctx.fillStyle = '#e0a83c'; ctx.fillRect(x0, y0, w, 3);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `800 19px ${DISPLAY}`; ctx.fillStyle = '#f2e8d2'; ctx.fillText(P.cap, CX, y0 + 23);
+  ctx.font = `600 12px ${BODY}`; ctx.textAlign = 'left';
+  let x = CX - stepsW / 2;
+  STEPS.forEach((s, i) => {
+    ctx.fillStyle = i === P.step ? '#e0a83c' : i < P.step ? 'rgba(242,232,210,.75)' : 'rgba(242,232,210,.35)';
+    ctx.fillText(s, x, y0 + 45); x += ws[i] + gap;
+  });
+}
+
+/* ---------- update ---------- */
+function update(dt) {
+  if (mode === 'paused') return;
+  simTime += dt;
+  updateParticles(dt);
+  crowdHype = Math.max(0, crowdHype - dt * .35);
+  shakeT = Math.max(0, shakeT - dt); flashT = Math.max(0, flashT - dt);
+  if (banner) { banner.t -= dt; if (banner.t <= 0) banner = null; }
+  if (mode === 'ceremony') { updateCeremony(dt); return; }
+  if (freezeT > 0) {
+    const before = Math.ceil(freezeT); freezeT -= dt;
+    const after = freezeT > 0 ? Math.ceil(freezeT) : 0;
+    if (mode === 'play' && after !== before) sfxDrum(after === 0);
+    return;
+  }
+  if (pauseT > 0) {
+    pauseT -= dt;
+    for (const r of active) { const k = Math.exp(-2 * dt); r.vx *= k; r.vy *= k; r.x += r.vx * dt; r.y += r.vy * dt; r.phase += hyp(r.vx, r.vy) * dt * .06; r.throwT = Math.max(0, r.throwT - dt); bound(r); }
+    updateUlak(dt);
+    updateRef(dt);
+    if (pauseT <= 0) {
+      if (pauseNext === 'end') endMatch();
+      else if (pauseNext === 'jekeme') setupJekeme(pendingJek);
+      else { if (pauseNext === 'period') clock = PERIOD_LEN; kickoff(); }
+    }
+    return;
+  }
+  for (const b of BENCH) if (b.kind === 'sub') b.energy = Math.min(1, b.energy + dt * .02);
+  subCd[0] = Math.max(0, subCd[0] - dt); subCd[1] = Math.max(0, subCd[1] - dt);
+  for (const r of riders) if (r.pen > 0) {
+    r.pen -= dt;
+    if (r.pen <= 0) {
+      r.pen = 0; r.x = r.team ? 900 : 300; r.y = F.y0 + RR + 6; r.vx = r.vy = 0; r.a = Math.PI / 2; r.cache = null;
+      active = riders.filter(onField);
+      addFloat(r.x, r.y + 30, `${TEAM[r.team].name} #${r.num} is back`, '#efe2c4');
+    }
+  }
+  if (mode === 'play' && !overtime) {
+    clock -= dt;
+    if (clock <= 0) {
+      clock = 0;
+      if (period < PERIODS) {
+        period++;
+        banner = { text: `Period ${period}`, sub: `End of period ${period - 1} · ${score[0]}–${score[1]}`, t: 2, max: 2, color: '#efe2c4' };
+        sfxWhistle(); ulak.dead = true; ulak.carrier = null;
+        pauseT = 2.1; pauseNext = 'period';
+        return;
+      }
+      if (score[0] === score[1]) { overtime = true; banner = { text: 'Golden ulak', sub: 'Next kazan wins the match', t: 2.2, max: 2.2, color: '#e0a83c' }; }
+      else { endMatch(); return; }
+    }
+  }
+  for (const r of active) {
+    const human = r === player && mode === 'play';
+    const c = human ? humanControl() : aiControl(r, dt);
+    if (c.thr && ulak.carrier === r) { if (human) playerThrow(r, false); else doThrow(r, c.aim, false); }
+    move(r, c, dt, human);
+  }
+  /* ride the ulak right up to the kazan and Sarmat drops it in */
+  if (mode === 'play' && ulak.carrier === player && onField(player)) {
+    const K = KAZ[1];
+    if (hyp(player.x - K.x, player.y - K.y) < DUNK_R) playerThrow(player, true);
+  }
+  collide(dt);
+  updateTug(dt);
+  updateUlak(dt);
+  updateRef(dt);
+  if (jek) {
+    jek.t = (jek.t || 0) + dt;
+    if (ulakGone() || ulak.fly || hyp(ulak.x - jek.x, ulak.y - jek.y) > JK_R + 6 || jek.t > 12) jek = null;
+  }
+}
+
+/* ---------- drawing: horses and riders ---------- */
+function drawHorseRider(x, y, a, phase, g, coat, coatDark, coatLight, T, o = {}) {
+  const idle = g < .05 ? Math.sin(simTime * 2.2 + phase) * 5 : 0;
+  const lean = o.throwP != null ? Math.sin(o.throwP * Math.PI) * 3 : 0;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.strokeStyle = '#2a1d15'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const [lx, ly, off] of [[13, -7, 0], [13, 7, Math.PI * .5], [-13, -7, Math.PI], [-13, 7, Math.PI * 1.5]]) {
+    const sw = Math.sin(phase + off) * 8 * g;
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + sw, ly * 1.5); ctx.stroke();
+  }
+  ctx.strokeStyle = coatDark; ctx.lineWidth = 4;
+  const tw = Math.sin(phase * .5 + 1) * 7 * g + idle;
+  ctx.beginPath(); ctx.moveTo(-23, 0); ctx.quadraticCurveTo(-31, Math.sin(phase * .5) * 4, -38, tw); ctx.stroke();
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-24, 1); ctx.quadraticCurveTo(-31, 3, -36, tw + 3); ctx.stroke();
+  ctx.fillStyle = coat; ell(ctx, 0, 0, 25, 11); ell(ctx, 19, 0, 10, 7);
+  ctx.beginPath(); ctx.ellipse(31, 0, 8.5, 5.2, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = coatLight; ctx.globalAlpha = .35; ell(ctx, -4, -3.5, 17, 4); ctx.globalAlpha = 1;
+  ctx.fillStyle = coatDark; ell(ctx, 37.5, 0, 3.4, 3.6); ell(ctx, 26, -4.6, 2.2, 1.6); ell(ctx, 26, 4.6, 2.2, 1.6);
+  ctx.strokeStyle = coatDark; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(27, 0); ctx.stroke();
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 4; i++) { const mx = 10 + i * 4.5; ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx - 3, (i % 2 ? 2.5 : -2.5) + Math.sin(phase + i) * g); ctx.stroke(); }
+  ctx.fillStyle = T.color; ell(ctx, -3, 0, 10, 12.5);
+  ctx.strokeStyle = T.trim; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(-3, 0, 10, 12.5, 0, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(-3, 0, 6.5, 9, 0, 0, TAU); ctx.stroke();
+  ctx.fillStyle = '#2a1d15'; ell(ctx, -1, -13.5, 2, 1.4); ell(ctx, -1, 13.5, 2, 1.4);
+  ctx.translate(lean, 0);
+  ctx.strokeStyle = T.dark; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  if (o.pose === 'bata') { ctx.beginPath(); ctx.moveTo(1, -6); ctx.lineTo(10, -1.8); ctx.stroke(); }
+  else if (o.pose === 'omin') { ctx.beginPath(); ctx.moveTo(1, -6); ctx.lineTo(5, -2.6); ctx.stroke(); }
+  else { ctx.beginPath(); ctx.moveTo(1, -6); ctx.lineTo(9, -3); ctx.stroke(); }
+  if (o.throwP != null) {
+    const p = easeOut(o.throwP), ang = 2.4 - p * 2.3;
+    const hx = -1 + Math.cos(ang) * 15, hy = 7 + Math.sin(ang) * 15;
+    ctx.lineWidth = 3.8; ctx.beginPath(); ctx.moveTo(-1, 7); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.fillStyle = '#c99a72'; ell(ctx, hx, hy, 2, 2);
+  } else if (o.reach != null) {
+    const side = Math.sin(o.reach) >= 0 ? 6 : -6, hx = Math.cos(o.reach) * 18, hy = Math.sin(o.reach) * 18;
+    ctx.lineWidth = 3.8; ctx.beginPath(); ctx.moveTo(0, side); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.fillStyle = '#c99a72'; ell(ctx, hx, hy, 2.3, 2.3);
+  } else if (o.arm) {
+    ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(-1, 8); ctx.lineTo(3, 15); ctx.stroke();
+  } else if (o.pose === 'greet') {
+    ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(1, 6); ctx.lineTo(20, 13); ctx.stroke();
+    ctx.fillStyle = '#c99a72'; ell(ctx, 20.5, 13.5, 2.2, 2.2);
+  } else if (o.pose === 'bata') {
+    ctx.beginPath(); ctx.moveTo(1, 6); ctx.lineTo(10, 1.8); ctx.stroke();
+    ctx.fillStyle = '#c99a72'; ell(ctx, 11, 0, 3, 3.4);
+    ctx.strokeStyle = 'rgba(80,50,30,.5)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(13.5, 0); ctx.stroke();
+  } else if (o.pose === 'omin') {
+    ctx.beginPath(); ctx.moveTo(1, 6); ctx.lineTo(5, 2.6); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(1, 6); ctx.lineTo(9, 3); ctx.stroke();
+  }
+  if (o.flagUp) {
+    ctx.strokeStyle = '#1c1c1f'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-1, -7); ctx.lineTo(-4, -20); ctx.stroke();
+    ctx.fillStyle = '#e8c22c'; ctx.fillRect(-10, -26, 8, 6);
+  }
+  ctx.fillStyle = T.dark; ell(ctx, -2, 0, 6.5, 11);
+  ctx.fillStyle = '#f3ede0'; ell(ctx, -1, 0, 6, 6);
+  ctx.strokeStyle = '#26221f'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(-1, 0, 6, 0, TAU); ctx.stroke();
+  ctx.fillStyle = '#26221f'; ell(ctx, -1, 0, 1.3, 1.3);
+  if (o.pose === 'omin') { ctx.fillStyle = '#c99a72'; ell(ctx, 3, 0, 3, 4.6); }
+  ctx.restore();
+}
+function drawRider(r) {
+  const s = hyp(r.vx, r.vy);
+  const o = { arm: ulak.carrier === r, flagUp: r === REF && r.armUp, pose: r.pose };
+  if (r.throwT > 0) o.throwP = 1 - r.throwT / .38;
+  if (ulak.tugOn && ulak.tugSet && ulak.tugSet.has(r)) o.reach = wrap(Math.atan2(ulak.y - r.y, ulak.x - r.x) - r.a);
+  drawHorseRider(r.x, r.y, r.a, r.phase, Math.min(1, s / 150), r.coat, r.coatDark, r.coatLight, r.colors || TEAM[r.team], o);
+  if (r.grabT > 0) {
+    const p = 1 - r.grabT / .3;
+    ctx.strokeStyle = `rgba(242,232,210,${(1 - p) * .8})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(r.x, r.y, 20 + p * 22, 0, TAU); ctx.stroke();
+  }
+}
+function drawUlak() {
+  const u = ulak; if (!u || u.hidden) return;
+  const sink = u.sinkT > 0 ? u.sinkT / .45 : 1;
+  for (let i = 0; i < u.trail.length; i++) {
+    const t = u.trail[i], a = (i + 1) / u.trail.length;
+    ctx.fillStyle = `rgba(242,232,210,${a * .28})`;
+    ell(ctx, t.x, t.y - t.z * .9, 9 * a + 2, 5 * a + 1);
+  }
+  if (!u.carrier) {
+    const sh = Math.max(.3, 1 - u.z / 150);
+    ctx.fillStyle = `rgba(0,0,0,${.3 * sh * sink})`; ell(ctx, u.x + 3 + u.z * .3, u.y + 4 + u.z * .45, 13 * sh * sink, 7 * sh * sink);
+    if (u.z < 2 && !u.fly && u.sinkT <= 0) {
+      ctx.strokeStyle = `rgba(242,232,210,${.35 + .25 * Math.sin(simTime * 5)})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(u.x, u.y, 22 + 3 * Math.sin(simTime * 5), 0, TAU); ctx.stroke();
+    }
+  }
+  const sc = (1 + u.z / 85) * sink;
+  ctx.save(); ctx.translate(u.x, u.y - u.z * .9); ctx.rotate(u.rot); ctx.scale(sc, sc);
+  ctx.fillStyle = '#7d6853'; ell(ctx, 0, 0, 14, 7.5);
+  ctx.fillStyle = '#56442f'; ell(ctx, -10, 0, 4.5, 5); ell(ctx, 10, 0, 4.5, 5);
+  ctx.fillStyle = 'rgba(235,220,195,.35)'; ell(ctx, -2, -2.5, 8, 2.5);
+  ctx.strokeStyle = 'rgba(60,45,30,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-6, 2); ctx.lineTo(6, 2); ctx.stroke();
+  ctx.restore();
+}
+
+/* ---------- benches ---------- */
+const BENCH = [];
+for (const t of [0, 1]) {
+  const m = x => t ? W - x : x;
+  const a = t ? Math.PI : 0;
+  BENCH.push({ team: t, kind: 'sub', x: m(352), y: 21, a, coat: ['#8a5532', '#3e2a1f'][t], ph: 0, num: 5, energy: 1 });
+  BENCH.push({ team: t, kind: 'sub', x: m(426), y: 43, a, coat: ['#c49a6c', '#6b4129'][t], ph: 2, num: 6, energy: 1 });
+  BENCH.push({ team: t, kind: 'manager', x: m(492), y: 24, suit: '#3b3846', ph: 1 });
+  BENCH.push({ team: t, kind: 'manager', x: m(516), y: 44, suit: '#4a3f36', ph: 3 });
+  BENCH.push({ team: t, kind: 'coach', x: m(556), y: 33, ph: 0 });
+}
+for (const b of BENCH) if (b.coat) { b.coatDark = shade(b.coat, .55); b.coatLight = shade(b.coat, 1.25); }
+function drawPerson(x, y, coat, trim, hat, armSwing) {
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ell(ctx, x + 3, y + 4, 11, 6);
+  ctx.strokeStyle = coat; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+  for (const s of [-1, 1]) {
+    const lift = armSwing * (s === 1 ? 1 : .6);
+    ctx.beginPath(); ctx.moveTo(x + s * 8, y); ctx.lineTo(x + s * (11 + Math.abs(lift) * 2), y + 7 - lift * 12); ctx.stroke();
+  }
+  ctx.fillStyle = coat; ell(ctx, x, y, 10, 5.5);
+  if (trim) { ctx.strokeStyle = trim; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(x, y, 10, 5.5, 0, 0, TAU); ctx.stroke(); }
+  ctx.fillStyle = hat ? '#f3ede0' : '#2a1d16'; ell(ctx, x, y - 1, 5, 5);
+  if (hat) { ctx.strokeStyle = '#26221f'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y - 1, 5, 0, TAU); ctx.stroke(); }
+}
+function drawBenches() {
+  for (const b of BENCH) {
+    const T = TEAM[b.team];
+    if (b.kind === 'sub') {
+      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.save(); ctx.translate(b.x + 3, b.y + 4); ctx.rotate(b.a); ell(ctx, 3, 0, 28, 11); ctx.restore();
+      drawHorseRider(b.x, b.y, b.a, b.ph, 0, b.coat, b.coatDark, b.coatLight, T);
+    } else {
+      const excited = (pauseT > 0 && lastScorer === b.team) || (ulak && ulak.carrier && ulak.carrier.team === b.team && hyp(ulak.x - KAZ[1 - b.team].x, ulak.y - KAZ[1 - b.team].y) < 300);
+      const swing = excited ? Math.sin(simTime * 10 + b.ph) : Math.sin(simTime * .8 + b.ph) * .12;
+      const pace = b.kind === 'coach' ? Math.sin(simTime * .5) * 10 : 0;
+      if (b.kind === 'coach') drawPerson(b.x + pace, b.y, T.dark, T.trim, true, swing);
+      else drawPerson(b.x, b.y, b.suit, null, b.ph === 1, swing * .6);
+    }
+  }
+}
+
+function drawPenaltyBox() {
+  const boxed = riders.filter(r => r.pen > 0);
+  boxed.forEach((r, i) => {
+    const y = 33 + i * 14, x = PBOX.x - 3;
+    drawHorseRider(x, y, 0, r.phase, 0, r.coat, r.coatDark, r.coatLight, TEAM[r.team]);
+  });
+  if (boxed.length) {
+    ctx.font = `800 8px ${DISPLAY}`; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#e8c22c';
+    ctx.fillText(`0:${String(Math.ceil(boxed[0].pen)).padStart(2, '0')}`, PBOX.x - 50, 10);
+  }
+}
+function drawTug() {
+  const u = ulak;
+  if (!u || !u.tugOn || !u.carrier || !u.tugBy) return;
+  const c = u.carrier, f = u.tugBy, p = u.tugP || 0;
+  let wy = Math.max(c.y, f.y) + 34; const below = wy <= F.y1 - 30;
+  if (!below) wy = Math.min(c.y, f.y) - 40;
+  const P = project((c.x + f.x) / 2, wy), mx = clamp(P.x, 60, W - 60), my = P.y, w = 78, h = 9;
+  ctx.fillStyle = 'rgba(19,26,43,.88)'; ctx.fillRect(mx - w / 2 - 2, my - h / 2 - 2, w + 4, h + 4);
+  ctx.fillStyle = TEAM[c.team].color; ctx.fillRect(mx - w / 2, my - h / 2, w, h);
+  ctx.fillStyle = TEAM[f.team].color; ctx.fillRect(mx - w / 2, my - h / 2, w * p, h);
+  ctx.fillStyle = '#f2e8d2'; ctx.fillRect(mx - w / 2 + w * p - 1, my - h / 2 - 2, 2, h + 4);
+  const me = mode === 'play' && (c === player || (u.tugSet && u.tugSet.has(player)));
+  if (me) {
+    const key = COARSE ? 'GRIP' : 'E';
+    const label = c === player ? `HOLD ${key} · keep the ulak` : COARSE ? 'TAP GRIP FAST · pull it away' : 'TAP E OR SPACE FAST · pull it away';
+    ctx.font = `800 11px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(19,26,43,.85)';
+    const ly = below ? my + 10 : my - 24;
+    ctx.strokeText(label, mx, ly); ctx.fillStyle = '#e0a83c'; ctx.fillText(label, mx, ly);
+  }
+}
+/* ---------- broadcast camera ----------
+   The world is drawn top-down into an offscreen canvas, then projected onto the
+   screen in thin horizontal strips with a perspective tilt, as if filmed from the
+   stands (the near side is the bottom of the field). It follows Sarmat in play and
+   pulls back wide for the ceremony, the countdown, a salym and jekeme-jeke. */
+const TILT = .8, TB = 1 - TILT;
+const Z_WIDE = 1, Z_FOLLOW = 1.18, Z_JEK = 1.3;
+const cam = { x: CX, y: H - H / (2 * TILT), z: Z_WIDE, zp: 1, sx: CX, sy: CY };
+/* steppe around the field and a snowy range on the horizon, like Ala-Too behind a real field */
+const RIDGE = [], HILLS = [];
+for (let x = -560; x <= W + 560; x += 30) {
+  RIDGE.push([x, -62 - clamp(52 + 38 * Math.sin(x * .0105) + 24 * Math.sin(x * .029 + 1.3) + 12 * Math.sin(x * .071 + 2.1), 8, 135)]);
+  HILLS.push([x, -34 - clamp(16 + 12 * Math.sin(x * .017 + .4) + 7 * Math.sin(x * .053), 2, 40)]);
+}
+function drawSurroundings() {
+  const sky = ctx.createLinearGradient(0, -420, 0, -60);
+  sky.addColorStop(0, '#8fa9bb'); sky.addColorStop(1, '#dcdccb');
+  ctx.fillStyle = sky; ctx.fillRect(-600, -420, W + 1200, 380);
+  ctx.beginPath(); ctx.moveTo(-600, -20);
+  for (const [x, y] of RIDGE) ctx.lineTo(x, y);
+  ctx.lineTo(W + 600, -20); ctx.closePath();
+  ctx.fillStyle = '#7a8a99'; ctx.fill();
+  ctx.save(); ctx.clip();
+  ctx.fillStyle = '#eef0ec'; ctx.fillRect(-600, -420, W + 1200, 300);
+  ctx.restore();
+  ctx.beginPath(); ctx.moveTo(-600, 0);
+  for (const [x, y] of HILLS) ctx.lineTo(x, y);
+  ctx.lineTo(W + 600, 0); ctx.closePath();
+  ctx.fillStyle = '#5f6a3c'; ctx.fill();
+  ctx.fillStyle = '#666d3e'; ctx.fillRect(-600, -6, W + 1200, H + 400);
+}
+const off = document.createElement('canvas'), offCtx = off.getContext('2d');
+const U = v => (1 / TILT - 1 / (TILT + TB * v)) / (1 / TILT - 1);
+function camGoal() {
+  if (mode === 'play' && !cer && freezeT <= 0 && pauseT <= 0) {
+    if (jek) return [jek.x, jek.y, Z_JEK];
+    let tx = player.x + player.vx * .3, ty = player.y + player.vy * .3;
+    if (ulak && !ulakGone() && ulak.carrier !== player) { tx += (ulak.x - tx) * .3; ty += (ulak.y - ty) * .3; }
+    return [tx, ty, Z_FOLLOW];
+  }
+  return [CX, CY, Z_WIDE];
+}
+function updateCamera(dt) {
+  if (mode === 'paused') return;
+  const [tx, ty, tz] = camGoal();
+  cam.z += (tz - cam.z) * Math.min(1, dt * 1.6);
+  const vw = W / cam.z, vh = H / (TILT * cam.z);
+  const gx = vw >= W ? CX : clamp(tx, vw / 2, W - vw / 2);
+  /* wide shots keep the stands at the bottom edge and show the mountains on the horizon */
+  const gy = vh >= H ? H - vh / 2 : clamp(ty, vh / 2 - 50, H - vh / 2);
+  const k = Math.min(1, dt * 2.4);
+  cam.x += (gx - cam.x) * k; cam.y += (gy - cam.y) * k;
+}
+/* world point -> screen point (in the 1200x720 screen design space) */
+function project(wx, wy) {
+  const oh = off.height || 1;
+  const u = ((wy - cam.sy) * cam.zp + oh / 2) / oh;
+  const den = 1 / TILT - u * (1 / TILT - 1);
+  const v = den > 0 ? (1 / den - TILT) / TB : 2;
+  const s = TILT + TB * v;
+  return { x: (cv.width / 2 + (wx - cam.sx) * cam.zp * s) / (cv.width / W), y: v * H, s: cam.z * s, sv: cam.z * s * s };
+}
+function blit() {
+  const cw = cv.width, ch = cv.height, ow = off.width, oh = off.height;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#3b3f27'; ctx.fillRect(0, 0, cw, ch);
+  const step = Math.max(2, Math.round(ch / 360));
+  for (let y0 = 0; y0 < ch; y0 += step) {
+    const y1 = Math.min(ch, y0 + step), v0 = y0 / ch, v1 = y1 / ch, s = TILT + TB * (v0 + v1) / 2;
+    const u0 = U(v0) * oh, u1 = U(v1) * oh, sw = cw / s;
+    ctx.drawImage(off, (ow - sw) / 2, u0, sw, Math.max(.5, u1 - u0), 0, y0, cw, y1 - y0 + 1);
+  }
+  /* haze on the far side gives the field depth */
+  const g = ctx.createLinearGradient(0, 0, 0, ch * .45);
+  g.addColorStop(0, 'rgba(214,206,180,.16)'); g.addColorStop(1, 'rgba(214,206,180,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch * .45);
+}
+
+/* ---------- render ---------- */
+function render() {
+  let ox = 0, oy = 0;
+  if (shakeT > 0) { const s = shakeT / .4 * 6; ox = (Math.random() - .5) * s; oy = (Math.random() - .5) * s; }
+  const ow = Math.ceil(cv.width / TILT), oh = Math.ceil(cv.height / TILT);
+  if (off.width !== ow || off.height !== oh) { off.width = ow; off.height = oh; }
+  cam.zp = (cv.width / W) * cam.z; cam.sx = cam.x + ox; cam.sy = cam.y + oy;
+
+  /* world pass */
+  ctx = offCtx;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#3b3f27'; ctx.fillRect(0, 0, ow, oh);
+  ctx.setTransform(cam.zp, 0, 0, cam.zp, ow / 2 - cam.sx * cam.zp, oh / 2 - cam.sy * cam.zp);
+  ctx.lineJoin = 'round';
+  drawSurroundings();
+  ctx.drawImage(fieldCan, 0, 0, W, H);
+  drawBenches();
+  drawFans();
+  drawPenaltyBox();
+  drawElder();
+  const playing = mode === 'play' || mode === 'paused' || mode === 'ceremony';
+  if (jek) {
+    ctx.strokeStyle = `rgba(232,194,44,${.6 + .3 * Math.sin(simTime * 6)})`; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(jek.x, jek.y, JK_R, 0, TAU); ctx.stroke();
+  }
+  const drawDust = old => {
+    for (const p of parts) if (p.kind === 0) {
+      const a = p.life / p.max;
+      if (old && a > .55) continue;
+      ctx.fillStyle = `rgba(222,198,146,${a * (old ? .2 : .32)})`;
+      const r = p.r * (2 - a);
+      ell(ctx, p.x, p.y, r, r);
+    }
+  };
+  drawDust(false);
+  for (const p of parts) if (p.kind === 2) {
+    const a = p.life / p.max, r = p.r + (1 - a) * 90;
+    ctx.strokeStyle = p.col; ctx.globalAlpha = a; ctx.lineWidth = 5 * a + 1;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  let lock = null;
+  if (playing && ulak && ulak.carrier === player) {
+    lock = lockInfo(player);
+    const K = KAZ[1], pulse = Math.sin(simTime * 6);
+    ctx.setLineDash([4, 7]); ctx.strokeStyle = 'rgba(224,168,60,.55)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(K.x, K.y, LOCK_R, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = lock.ok ? `rgba(224,168,60,${.75 + .25 * pulse})` : 'rgba(242,232,210,.35)';
+    ctx.lineWidth = lock.ok ? 4 : 2;
+    ctx.beginPath(); ctx.arc(K.x, K.y, KR + 16 + 3 * pulse, 0, TAU); ctx.stroke();
+    if (lock.ok) {
+      const sxp = ulak.x, syp = ulak.y, h = 26 + lock.d * .12;
+      ctx.fillStyle = 'rgba(242,232,210,.75)';
+      for (let i = 1; i < 14; i++) {
+        const p = (i / 14 + simTime * .6) % 1;
+        const px = sxp + (K.x - sxp) * p, py = syp + (K.y - syp) * p - Math.sin(Math.PI * p) * h * .9;
+        ell(ctx, px, py, 2.4, 2.4);
+      }
+    } else {
+      ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(242,232,210,.5)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.x + Math.cos(player.a) * 110, player.y + Math.sin(player.a) * 110); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  /* long afternoon shadows: the horse's on the ground, the rider's further out because he sits high */
+  for (const r of [...active, REF]) {
+    ctx.fillStyle = 'rgba(24,20,10,.24)'; ctx.save(); ctx.translate(r.x + 8, r.y + 10); ctx.rotate(r.a); ell(ctx, 3, 0, 31, 13); ctx.restore();
+    ctx.fillStyle = 'rgba(24,20,10,.17)'; ell(ctx, r.x + 19, r.y + 24, 9, 7);
+  }
+  if (playing) {
+    ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(simTime * 1.5);
+    ctx.setLineDash([8, 6]); ctx.strokeStyle = 'rgba(224,168,60,.95)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0, 0, 32, 0, TAU); ctx.stroke(); ctx.restore(); ctx.setLineDash([]);
+  }
+  for (const r of [...active, REF].sort((a, b) => a.y - b.y)) drawRider(r);
+  drawUlak();
+  drawDust(true);
+  for (const p of parts) if (p.kind === 1) {
+    ctx.globalAlpha = Math.min(1, p.life / p.max * 1.5);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.fillRect(-p.r, -p.r * .6, p.r * 2, p.r * 1.2); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+
+  /* project the world onto the screen */
+  ctx = mainCtx;
+  blit();
+
+  /* overlay pass, in screen space */
+  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+  ctx.lineJoin = 'round';
+  drawTug();
+  drawCaption();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (playing) {
+    const P = project(player.x, player.y), top = P.y - 28 * P.sv - 4;
+    ctx.fillStyle = '#e0a83c';
+    ctx.beginPath(); ctx.moveTo(P.x - 8, top - 10); ctx.lineTo(P.x + 8, top - 10); ctx.lineTo(P.x, top); ctx.closePath(); ctx.fill();
+    ctx.font = `800 12px ${DISPLAY}`; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(19,26,43,.8)';
+    ctx.strokeText('SARMAT', P.x, top - 22); ctx.fillStyle = '#f2e8d2'; ctx.fillText('SARMAT', P.x, top - 22);
+  }
+  if (lock && lock.ok) {
+    const K = KAZ[1], P = project(K.x, K.y - KR - 10), bob = Math.sin(simTime * 6) * 3;
+    ctx.font = `900 18px ${DISPLAY}`; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(19,26,43,.85)';
+    ctx.strokeText('THROW!', P.x, P.y - 16 + bob); ctx.fillStyle = '#e0a83c'; ctx.fillText('THROW!', P.x, P.y - 16 + bob);
+  }
+  for (const f of floats) {
+    const P = project(f.x, f.y);
+    ctx.globalAlpha = Math.min(1, f.life * 2); ctx.font = `800 17px ${DISPLAY}`;
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(19,26,43,.75)'; ctx.strokeText(f.text, P.x, P.y);
+    ctx.fillStyle = f.col; ctx.fillText(f.text, P.x, P.y);
+  }
+  ctx.globalAlpha = 1;
+  if (joy.id !== null) {
+    ctx.strokeStyle = 'rgba(242,232,210,.4)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(joy.ox, joy.oy, 70, 0, TAU); ctx.stroke();
+    ctx.fillStyle = 'rgba(242,232,210,.5)'; ell(ctx, joy.ox + joy.dx * 70, joy.oy + joy.dy * 70, 26, 26);
+  }
+  if (mode === 'play' && freezeT > 0) {
+    const n = Math.ceil(freezeT), fr = freezeT - Math.floor(freezeT);
+    const pop = 1 + Math.max(0, fr - .7) * 1.5;
+    ctx.save(); ctx.translate(CX, CY - 150); ctx.scale(pop, pop);
+    ctx.globalAlpha = Math.min(1, fr * 2.5);
+    ctx.font = `900 120px ${DISPLAY}`; ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(19,26,43,.7)';
+    ctx.strokeText(String(n), 0, 0); ctx.fillStyle = '#f2e8d2'; ctx.fillText(String(n), 0, 0);
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
+  if (flashT > 0) { ctx.fillStyle = `rgba(255,244,220,${flashT / .25 * .25})`; ctx.fillRect(-10, -10, W + 20, H + 20); }
+  if (banner) {
+    const el = banner.max - banner.t, a = Math.min(1, banner.t * 4);
+    const slide = (1 - easeOut(Math.min(1, el * 3.5))) * -W * .6;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(19,26,43,.82)'; ctx.fillRect(0, CY - 70, W, 140);
+    ctx.fillStyle = banner.color; ctx.fillRect(0, CY - 70, W, 5); ctx.fillRect(0, CY + 65, W, 5);
+    ctx.font = `900 74px ${DISPLAY}`; ctx.fillStyle = '#f2e8d2'; ctx.fillText(banner.text, CX + slide, CY - 12);
+    ctx.font = `600 22px ${BODY}`; ctx.fillStyle = '#e0a83c'; ctx.fillText(banner.sub, CX - slide, CY + 40);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ---------- HUD ---------- */
+const hudEls = { sA: $('sA'), sB: $('sB'), clk: $('clk'), st: $('st'), stam: $('stamI') };
+const hudCache = {};
+function setText(k, v) { if (hudCache[k] !== v) { hudCache[k] = v; hudEls[k].textContent = v; } }
+function hud() {
+  setText('sA', String(score[0])); setText('sB', String(score[1]));
+  if (cer) setText('clk', 'Opening');
+  else if (mode === 'attract' || mode === 'over') setText('clk', 'Exhibition');
+  else if (overtime) setText('clk', 'Golden ulak');
+  else { const t = Math.ceil(clock); setText('clk', `P${period} · ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`); }
+  const c = ulak && ulak.carrier;
+  let st = 'Ulak is loose';
+  const boxed = riders.filter(r => r.pen > 0);
+  if (ulak && ulak.dead) st = 'Play stopped';
+  else if (ulak && ulakGone()) st = 'Salym!';
+  else if (jek) st = 'Jekeme-jeke · one on one';
+  else if (ulak && ulak.fly) st = 'Ulak in the air';
+  else if (c === player && mode === 'play') st = lockInfo(player).ok ? 'In range, throw!' : 'Sarmat has the ulak';
+  else if (c && ulak.tugOn && mode === 'play' && (c === player || (ulak.tugSet && ulak.tugSet.has(player)))) st = 'Tug for the ulak!';
+  else if (c) st = `${TEAM[c.team].name} carry the ulak`;
+  if (boxed.length && st === 'Ulak is loose') st = `${boxed.map(r => TEAM[r.team].name + ' #' + r.num).join(', ')} in the box`;
+  if (cer) st = 'Kök Börü anthem';
+  setText('st', st);
+  const s = (mode === 'play' || mode === 'paused') ? player.stam : 1;
+  hudEls.stam.style.transform = `scaleX(${s.toFixed(3)})`;
+}
+
+/* ---------- loop ---------- */
+makeRiders(); kickoff();
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.033, (now - last) / 1000); last = now;
+  update(dt); updateCamera(dt); musicTick(dt); render(); hud();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(buildField);
+})();
+</script>
+
+</body>
+</html>
